@@ -1,6 +1,7 @@
 import { createMcpHandler } from "mcp-handler";
 import { neon } from "@neondatabase/serverless";
 import { z } from "zod";
+import { NextRequest, NextResponse } from "next/server";
 
 // Initialize database and ensure table exists
 async function getDb() {
@@ -24,15 +25,11 @@ async function getDb() {
 
 // Helper function for Workflowy API requests
 async function workflowyRequest(
+  apiKey: string,
   path: string,
   method: "GET" | "POST" | "DELETE",
   body?: Record<string, unknown>,
 ) {
-  const apiKey = process.env.WORKFLOWY_API_KEY;
-  if (!apiKey) {
-    throw new Error("WORKFLOWY_API_KEY is not set in process.env");
-  }
-
   const url = `https://workflowy.com${path}`;
 
   const res = await fetch(url, {
@@ -56,10 +53,24 @@ async function workflowyRequest(
     content: [
       {
         type: "text" as const,
-        text: JSON.stringify({ http_status: res.status, ok: res.ok, data }, null, 2),
+        text: JSON.stringify(
+          { http_status: res.status, ok: res.ok, data },
+          null,
+          2,
+        ),
       },
     ],
   };
+}
+
+// Store API key in async local storage for the request
+let currentApiKey: string | null = null;
+
+function getApiKey(): string {
+  if (!currentApiKey) {
+    throw new Error("Workflowy API key not provided in Authorization header");
+  }
+  return currentApiKey;
 }
 
 const handler = createMcpHandler(
@@ -72,7 +83,9 @@ const handler = createMcpHandler(
       {
         name: z
           .string()
-          .describe("A friendly name for the bookmark (e.g., 'special_inbox', 'work_tasks')"),
+          .describe(
+            "A friendly name for the bookmark (e.g., 'special_inbox', 'work_tasks')",
+          ),
         node_id: z.string().describe("The Workflowy node UUID to bookmark"),
       },
       async ({ name, node_id }: { name: string; node_id: string }) => {
@@ -83,7 +96,12 @@ const handler = createMcpHandler(
           ON CONFLICT (name) DO UPDATE SET node_id = ${node_id}
         `;
         return {
-          content: [{ type: "text", text: `Bookmark "${name}" saved with node ID: ${node_id}` }],
+          content: [
+            {
+              type: "text",
+              text: `Bookmark "${name}" saved with node ID: ${node_id}`,
+            },
+          ],
         };
       },
     );
@@ -96,14 +114,20 @@ const handler = createMcpHandler(
       },
       async ({ name }: { name: string }) => {
         const sql = await getDb();
-        const result = await sql`SELECT node_id FROM bookmarks WHERE name = ${name}`;
+        const result =
+          await sql`SELECT node_id FROM bookmarks WHERE name = ${name}`;
         if (result.length === 0) {
           return {
             content: [{ type: "text", text: `Bookmark "${name}" not found` }],
           };
         }
         return {
-          content: [{ type: "text", text: JSON.stringify({ name, node_id: result[0].node_id }) }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ name, node_id: result[0].node_id }),
+            },
+          ],
         };
       },
     );
@@ -114,7 +138,8 @@ const handler = createMcpHandler(
       {},
       async () => {
         const sql = await getDb();
-        const result = await sql`SELECT name, node_id, created_at FROM bookmarks ORDER BY name`;
+        const result =
+          await sql`SELECT name, node_id, created_at FROM bookmarks ORDER BY name`;
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
@@ -129,7 +154,8 @@ const handler = createMcpHandler(
       },
       async ({ name }: { name: string }) => {
         const sql = await getDb();
-        const result = await sql`DELETE FROM bookmarks WHERE name = ${name} RETURNING name`;
+        const result =
+          await sql`DELETE FROM bookmarks WHERE name = ${name} RETURNING name`;
         if (result.length === 0) {
           return {
             content: [{ type: "text", text: `Bookmark "${name}" not found` }],
@@ -149,10 +175,16 @@ const handler = createMcpHandler(
       {
         parent_id: z
           .string()
-          .describe("Parent node ID: 'None' for top-level, 'inbox', 'home', or a node UUID"),
+          .describe(
+            "Parent node ID: 'None' for top-level, 'inbox', 'home', or a node UUID",
+          ),
       },
       async ({ parent_id }: { parent_id: string }) => {
-        return workflowyRequest(`/api/v1/nodes?parent_id=${encodeURIComponent(parent_id)}`, "GET");
+        return workflowyRequest(
+          getApiKey(),
+          `/api/v1/nodes?parent_id=${encodeURIComponent(parent_id)}`,
+          "GET",
+        );
       },
     );
 
@@ -163,7 +195,7 @@ const handler = createMcpHandler(
         node_id: z.string().describe("The node UUID to retrieve"),
       },
       async ({ node_id }: { node_id: string }) => {
-        return workflowyRequest(`/api/v1/nodes/${node_id}`, "GET");
+        return workflowyRequest(getApiKey(), `/api/v1/nodes/${node_id}`, "GET");
       },
     );
 
@@ -172,7 +204,7 @@ const handler = createMcpHandler(
       "Export all nodes from the entire Workflowy account. WARNING: Rate limited to 1 request per minute. Use sparingly.",
       {},
       async () => {
-        return workflowyRequest("/api/v1/nodes-export", "GET");
+        return workflowyRequest(getApiKey(), "/api/v1/nodes-export", "GET");
       },
     );
 
@@ -181,7 +213,7 @@ const handler = createMcpHandler(
       "Get special Workflowy targets like 'inbox' and 'home'. Useful for discovering available special locations.",
       {},
       async () => {
-        return workflowyRequest("/api/v1/targets", "GET");
+        return workflowyRequest(getApiKey(), "/api/v1/targets", "GET");
       },
     );
 
@@ -197,12 +229,23 @@ const handler = createMcpHandler(
           .describe(
             "Where to create the node: 'inbox', 'home', 'None' for top-level, or a node UUID",
           ),
-        note: z.string().optional().describe("Optional note/description for the node"),
+        note: z
+          .string()
+          .optional()
+          .describe("Optional note/description for the node"),
       },
-      async ({ name, parent_id, note }: { name: string; parent_id: string; note?: string }) => {
+      async ({
+        name,
+        parent_id,
+        note,
+      }: {
+        name: string;
+        parent_id: string;
+        note?: string;
+      }) => {
         const body: Record<string, unknown> = { name, parent_id };
         if (note) body.note = note;
-        return workflowyRequest("/api/v1/nodes", "POST", body);
+        return workflowyRequest(getApiKey(), "/api/v1/nodes", "POST", body);
       },
     );
 
@@ -214,11 +257,24 @@ const handler = createMcpHandler(
         name: z.string().optional().describe("New name/text for the node"),
         note: z.string().optional().describe("New note for the node"),
       },
-      async ({ node_id, name, note }: { node_id: string; name?: string; note?: string }) => {
+      async ({
+        node_id,
+        name,
+        note,
+      }: {
+        node_id: string;
+        name?: string;
+        note?: string;
+      }) => {
         const body: Record<string, unknown> = {};
         if (name !== undefined) body.name = name;
         if (note !== undefined) body.note = note;
-        return workflowyRequest(`/api/v1/nodes/${node_id}`, "POST", body);
+        return workflowyRequest(
+          getApiKey(),
+          `/api/v1/nodes/${node_id}`,
+          "POST",
+          body,
+        );
       },
     );
 
@@ -229,7 +285,11 @@ const handler = createMcpHandler(
         node_id: z.string().describe("The node UUID to delete"),
       },
       async ({ node_id }: { node_id: string }) => {
-        return workflowyRequest(`/api/v1/nodes/${node_id}`, "DELETE");
+        return workflowyRequest(
+          getApiKey(),
+          `/api/v1/nodes/${node_id}`,
+          "DELETE",
+        );
       },
     );
 
@@ -240,10 +300,25 @@ const handler = createMcpHandler(
         node_id: z.string().describe("The node UUID to move"),
         parent_id: z
           .string()
-          .describe("New parent: 'inbox', 'home', 'None' for top-level, or a node UUID"),
+          .describe(
+            "New parent: 'inbox', 'home', 'None' for top-level, or a node UUID",
+          ),
       },
-      async ({ node_id, parent_id }: { node_id: string; parent_id: string }) => {
-        return workflowyRequest(`/api/v1/nodes/${node_id}/move`, "POST", { parent_id });
+      async ({
+        node_id,
+        parent_id,
+      }: {
+        node_id: string;
+        parent_id: string;
+      }) => {
+        return workflowyRequest(
+          getApiKey(),
+          `/api/v1/nodes/${node_id}/move`,
+          "POST",
+          {
+            parent_id,
+          },
+        );
       },
     );
 
@@ -256,7 +331,11 @@ const handler = createMcpHandler(
         node_id: z.string().describe("The node UUID to mark as complete"),
       },
       async ({ node_id }: { node_id: string }) => {
-        return workflowyRequest(`/api/v1/nodes/${node_id}/complete`, "POST");
+        return workflowyRequest(
+          getApiKey(),
+          `/api/v1/nodes/${node_id}/complete`,
+          "POST",
+        );
       },
     );
 
@@ -267,7 +346,11 @@ const handler = createMcpHandler(
         node_id: z.string().describe("The node UUID to mark as incomplete"),
       },
       async ({ node_id }: { node_id: string }) => {
-        return workflowyRequest(`/api/v1/nodes/${node_id}/uncomplete`, "POST");
+        return workflowyRequest(
+          getApiKey(),
+          `/api/v1/nodes/${node_id}/uncomplete`,
+          "POST",
+        );
       },
     );
   },
@@ -303,4 +386,36 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
   },
 );
 
-export { handler as GET, handler as POST };
+// Wrap handler with authentication
+async function authHandler(
+  request: NextRequest,
+  context: { params: Promise<{ transport: string }> },
+) {
+  const authHeader = request.headers.get("Authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return NextResponse.json(
+      {
+        error:
+          "Missing or invalid Authorization header. Use: Bearer <your-workflowy-api-key>",
+      },
+      { status: 401 },
+    );
+  }
+
+  const apiKey = authHeader.slice(7); // Remove "Bearer " prefix
+  if (!apiKey) {
+    return NextResponse.json({ error: "API key is empty" }, { status: 401 });
+  }
+
+  // Set the API key for this request
+  currentApiKey = apiKey;
+
+  try {
+    return await handler(request, context);
+  } finally {
+    currentApiKey = null;
+  }
+}
+
+export { authHandler as GET, authHandler as POST };
