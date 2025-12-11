@@ -1,43 +1,74 @@
-# Run an MCP Server on Vercel
+# Workflowy MCP Server
 
-## Usage
+An MCP (Model Context Protocol) server that connects AI assistants to your Workflowy account, allowing them to read, create, update, and manage your Workflowy notes.
 
-Update `api/server.ts` with your tools, prompts, and resources following the [MCP TypeScript SDK documentation](https://github.com/modelcontextprotocol/typescript-sdk/tree/main?tab=readme-ov-file#server).
+## Setup
 
-[There is also a Next.js version of this template](https://vercel.com/templates/next.js/model-context-protocol-mcp-with-next-js)
+### 1. Deploy to [Vercel](https://vercel.com/new)
 
-## MCP Client Integration
+1. Fork or clone this repository
+2. Import the project in Vercel
+3. Add your Workflowy API key as an environment variable:
+   - Go to your project settings in Vercel
+   - Navigate to **Environment Variables**
+   - Add a new variable:
+     - Name: `WORKFLOWY_API_KEY`
+     - Value: Your Workflowy API key (get it from https://beta.workflowy.com/api-reference/)
+4. Deploy the project
 
-When adding this server to an MCP client application, use your deployment URL followed by `/mcp`:
+### 2. Connect to [Cherry Studio](https://www.cherry-ai.com/) (Optional)
+You can use your MCP server anywhere you want but this is an easy way to connect to it.
 
-```
-https://your-deployment-url.vercel.app/mcp
-```
+1. Open Cherry Studio
+2. Go to **Settings** > **MCP Servers**
+3. Click **Add Server**
+4. Configure the server:
+   - **Name**: Workflowy (or any name you prefer)
+   - **Type**: Streamable HTTP
+   - **URL**: `https://your-vercel-app.vercel.app/api/mcp`
+5. Click **Save**
 
-## Example Tools
+The MCP server should now be available in Cherry Studio.
 
-The template includes two example tools to get you started:
+## Available [Workflowy API](https://beta.workflowy.com/api-reference/) Endpoints
 
-- **`roll_dice`** - Rolls an N-sided die (minimum 2 sides)
-- **`get_weather`** - Gets current weather data (via an API) for a location using latitude, longitude, and city name
+The `workflowy_api` tool supports these endpoints:
 
-These tools demonstrate basic functionality and API integration patterns. Replace them with your own tools.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/nodes?parent_id=None` | List top-level nodes |
+| GET | `/api/v1/nodes?parent_id=:id` | List children of a node |
+| GET | `/api/v1/nodes/:id` | Get a single node |
+| POST | `/api/v1/nodes` | Create a node (body: `name`, `parent_id`) |
+| POST | `/api/v1/nodes/:id` | Update a node |
+| DELETE | `/api/v1/nodes/:id` | Delete a node |
+| POST | `/api/v1/nodes/:id/move` | Move a node (body: `parent_id`) |
+| POST | `/api/v1/nodes/:id/complete` | Mark node as complete |
+| POST | `/api/v1/nodes/:id/uncomplete` | Mark node as incomplete |
+| GET | `/api/v1/nodes-export` | Export all nodes (rate limit: 1 req/min) |
+| GET | `/api/v1/targets` | Get targets (inbox, home) |
 
-## Notes for running on Vercel
+The `parent_id` parameter accepts:
+- A node UUID
+- `"inbox"` - your Workflowy inbox
+- `"home"` - your Workflowy home
+- `"None"` - top-level nodes
 
-- Make sure you have [Fluid compute](https://vercel.com/docs/functions/fluid-compute) enabled for efficient execution
-- After enabling Fluid compute, open `vercel.json` and adjust max duration to 800 if you using a Vercel Pro or Enterprise account
-- [Deploy the MCP template](https://vercel.com/templates/other/model-context-protocol-mcp-with-vercel-functions)
+## Example Usage
 
-## Local dev
+Once connected, you can ask your AI assistant things like:
+- "Show me my top Workflowy notes"
+- "Create a new note called 'Meeting Notes' in my inbox"
+- "Mark the task 'Buy groceries' as complete"
 
-- Run `vercel dev` for local development
-- Alternatively, integrate the system into the server framework of your choice.
-
-## Sample Client
-
-`script/test-client.mjs` contains a sample client to try invocations.
+## Local Development
 
 ```sh
-node scripts/test-client.mjs https://mcp-on-vercel.vercel.app
+npm install
+npm run dev
 ```
+
+## Notes
+
+- Make sure you have [Fluid compute](https://vercel.com/docs/functions/fluid-compute) enabled in Vercel for efficient execution
+- The Workflowy API has rate limits, especially for the export endpoint (1 request per minute)
