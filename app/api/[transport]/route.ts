@@ -441,4 +441,35 @@ const authHandler = withMcpAuth(handler, verifyToken, {
   required: true,
 });
 
-export { authHandler as GET, authHandler as POST };
+// Handle GET requests specially for OAuth discovery
+// Claude Code sends GET to check server capabilities before POST
+async function handleGet(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+
+  // If this is a GET to /api/mcp, return server info instead of 405
+  // This helps MCP clients that probe the endpoint
+  if (url.pathname === "/api/mcp") {
+    return new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        result: {
+          name: "workflowy-mcp",
+          version: "1.0.0",
+          description: "MCP server for Workflowy - use POST for MCP protocol"
+        },
+        id: null
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+
+  // For other paths, use the auth handler
+  return authHandler(req);
+}
+
+export { handleGet as GET, authHandler as POST };
