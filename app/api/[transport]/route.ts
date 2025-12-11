@@ -2,8 +2,13 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { neon } from "@neondatabase/serverless";
 import { z } from "zod";
 
-// Import AuthInfo from the underlying SDK
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+// AuthInfo type matching @modelcontextprotocol/sdk's AuthInfo
+type AuthInfo = {
+  token: string;
+  clientId: string;
+  scopes: string[];
+  extra?: Record<string, unknown>;
+};
 
 // Initialize database and ensure table exists
 async function getDb() {
