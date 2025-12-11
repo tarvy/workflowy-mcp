@@ -64,36 +64,6 @@ async function workflowyRequest(
 
 const handler = createMcpHandler(
   (server) => {
-    // Server instructions for LLMs
-    server.instructions = `
-This MCP server connects to a user's Workflowy account. Workflowy is an outliner app where notes are organized as nested bullet points (nodes).
-
-## Key Concepts
-- Nodes have a UUID (id), name (text content), and optional note (description)
-- Nodes can be nested under other nodes (parent_id)
-- Special locations: 'inbox', 'home', or 'None' (top-level)
-
-## Bookmarks
-Bookmarks let you save node IDs with friendly names. When a user mentions a named location (like "my work inbox" or "project notes"), check bookmarks first with list_bookmarks or get_bookmark.
-
-## Common Workflows
-
-**Adding content to a bookmarked location:**
-1. get_bookmark to get the node_id
-2. create_node with that node_id as parent_id, usually as the node name, unless told otherwise
-
-**Exploring the hierarchy:**
-1. list_nodes with parent_id='None' to see top-level nodes
-2. list_nodes with a specific node_id to see its children
-
-## Tips
-- Always use get_bookmark when the user refers to a named location
-- Use list_bookmarks at the start if unsure what's been saved
-- Avoid export_all_nodes unless necessary (rate limited to 1/min)
-- Node names support basic formatting and markdown
-- You can send unlimited markdown as a single create_node request to add multiple nodes at once.
-`;
-
     // ==================== BOOKMARK TOOLS ====================
 
     server.tool(
@@ -301,7 +271,33 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
       },
     );
   },
-  {},
+  {
+    instructions: `This MCP server connects to a user's Workflowy account. Workflowy is an outliner app where notes are organized as nested bullet points (nodes).
+
+## Key Concepts
+- Nodes have a UUID (id), name (text content), and optional note (description)
+- Nodes can be nested under other nodes (parent_id)
+- Special locations: 'inbox', 'home', or 'None' (top-level)
+
+## Bookmarks
+Bookmarks let you save node IDs with friendly names. When a user mentions a named location (like "my work inbox" or "project notes"), check bookmarks first with list_bookmarks or get_bookmark.
+
+## Common Workflows
+
+**Adding content to a bookmarked location:**
+1. get_bookmark to get the node_id
+2. create_node with that node_id as parent_id
+
+**Exploring the hierarchy:**
+1. list_nodes with parent_id='None' to see top-level nodes
+2. list_nodes with a specific node_id to see its children
+
+## Tips
+- Always use get_bookmark when the user refers to a named location
+- Use list_bookmarks at the start if unsure what's been saved
+- Avoid export_all_nodes unless necessary (rate limited to 1/min)
+- Node names support basic formatting and markdown`,
+  },
   {
     basePath: "/api",
   },
