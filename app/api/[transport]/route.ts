@@ -177,7 +177,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "list_nodes",
-      "List child nodes under a parent. Use parent_id='None' for top-level nodes, or use 'inbox'/'home' for those special locations, or a specific node UUID.",
+      "List child nodes under a parent. Always use the specified parent_id if you know it. Otherwise, use parent_id='None' for top-level nodes, or use 'inbox'/'home' for those two special locations.",
       {
         parent_id: z
           .string()
