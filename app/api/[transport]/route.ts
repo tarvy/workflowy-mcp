@@ -105,32 +105,6 @@ const handler = createMcpHandler(
     );
 
     server.tool(
-      "get_bookmark",
-      "Get a saved Workflowy node ID by its bookmark name. Use this to retrieve node IDs for bookmarked locations before creating or moving nodes.",
-      {
-        name: z.string().describe("The bookmark name to look up"),
-      },
-      async ({ name }: { name: string }) => {
-        const sql = await getDb();
-        const result =
-          await sql`SELECT node_id FROM bookmarks WHERE name = ${name}`;
-        if (result.length === 0) {
-          return {
-            content: [{ type: "text", text: `Bookmark "${name}" not found` }],
-          };
-        }
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({ name, node_id: result[0].node_id }),
-            },
-          ],
-        };
-      },
-    );
-
-    server.tool(
       "list_bookmarks",
       "List all saved Workflowy bookmarks. Use this to see what locations have been bookmarked.",
       {},
@@ -219,11 +193,7 @@ const handler = createMcpHandler(
       "Get special Workflowy targets like 'inbox' and 'home'. Useful for discovering available special locations.",
       {},
       async (_args, extra) => {
-        return workflowyRequest(
-          getApiKey(extra),
-          "/api/v1/targets",
-          "GET",
-        );
+        return workflowyRequest(getApiKey(extra), "/api/v1/targets", "GET");
       },
     );
 
@@ -244,15 +214,18 @@ const handler = createMcpHandler(
           .optional()
           .describe("Optional note/description for the node"),
       },
-      async ({
-        name,
-        parent_id,
-        note,
-      }: {
-        name: string;
-        parent_id: string;
-        note?: string;
-      }, extra) => {
+      async (
+        {
+          name,
+          parent_id,
+          note,
+        }: {
+          name: string;
+          parent_id: string;
+          note?: string;
+        },
+        extra,
+      ) => {
         const body: Record<string, unknown> = { name, parent_id };
         if (note) body.note = note;
         return workflowyRequest(
@@ -272,15 +245,18 @@ const handler = createMcpHandler(
         name: z.string().optional().describe("New name/text for the node"),
         note: z.string().optional().describe("New note for the node"),
       },
-      async ({
-        node_id,
-        name,
-        note,
-      }: {
-        node_id: string;
-        name?: string;
-        note?: string;
-      }, extra) => {
+      async (
+        {
+          node_id,
+          name,
+          note,
+        }: {
+          node_id: string;
+          name?: string;
+          note?: string;
+        },
+        extra,
+      ) => {
         const body: Record<string, unknown> = {};
         if (name !== undefined) body.name = name;
         if (note !== undefined) body.note = note;
@@ -319,13 +295,16 @@ const handler = createMcpHandler(
             "New parent: 'inbox', 'home', 'None' for top-level, or a node UUID",
           ),
       },
-      async ({
-        node_id,
-        parent_id,
-      }: {
-        node_id: string;
-        parent_id: string;
-      }, extra) => {
+      async (
+        {
+          node_id,
+          parent_id,
+        }: {
+          node_id: string;
+          parent_id: string;
+        },
+        extra,
+      ) => {
         return workflowyRequest(
           getApiKey(extra),
           `/api/v1/nodes/${node_id}/move`,
@@ -378,21 +357,21 @@ const handler = createMcpHandler(
 - Special locations: 'inbox', 'home', or 'None' (top-level)
 
 ## Bookmarks
-Bookmarks let you save node IDs with friendly names. When a user mentions a named location (like "my work inbox" or "project notes"), check bookmarks first with list_bookmarks or get_bookmark.
+Bookmarks let you save node IDs with friendly names. When a user mentions a named location (like "my work inbox" or "project notes"), use list_bookmarks to see all saved bookmarks and pick the one that best matches what the user is referring to.
 
 ## Common Workflows
 
 **Adding content to a bookmarked location:**
-1. get_bookmark to get the node_id
-2. create_node with that node_id as parent_id
+1. list_bookmarks to see all saved locations
+2. Pick the bookmark that best matches what the user mentioned
+3. create_node with that node_id as parent_id
 
 **Exploring the hierarchy:**
 1. list_nodes with parent_id='None' to see top-level nodes
 2. list_nodes with a specific node_id to see its children
 
 ## Tips
-- Always use get_bookmark when the user refers to a named location
-- Use list_bookmarks at the start if unsure what's been saved
+- Always use list_bookmarks when the user refers to a named location, then pick the best match
 - Avoid export_all_nodes unless necessary (rate limited to 1/min)
 - Node names support basic formatting and markdown`,
   },
@@ -404,7 +383,7 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
 // Token verification function for withMcpAuth
 const verifyToken = async (
   _req: Request,
-  bearerToken?: string
+  bearerToken?: string,
 ): Promise<AuthInfo | undefined> => {
   if (!bearerToken) return undefined;
 

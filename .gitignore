@@ -18,3 +18,7 @@ package-lock.json
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Mac
+.DS_Store
+Thumbs.db
