@@ -387,10 +387,7 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
 );
 
 // Wrap handler with authentication
-async function authHandler(
-  request: NextRequest,
-  context: { params: Promise<{ transport: string }> },
-) {
+async function authHandler(request: NextRequest) {
   const authHeader = request.headers.get("Authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -412,7 +409,7 @@ async function authHandler(
   currentApiKey = apiKey;
 
   try {
-    return await handler(request, context);
+    return await handler(request);
   } finally {
     currentApiKey = null;
   }
