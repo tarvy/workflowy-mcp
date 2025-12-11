@@ -2,10 +2,10 @@
   "name": "mcp-on-vercel",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "keywords": [],
   "author": "",
@@ -13,9 +13,14 @@
   "packageManager": "pnpm@9.4.0",
   "dependencies": {
     "mcp-handler": "^1.0.1",
+    "next": "^14.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10"
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.4.0"
   }
 }

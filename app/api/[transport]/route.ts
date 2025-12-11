@@ -15,7 +15,17 @@ const handler = createMcpHandler(
         query: z.record(z.any()).optional().describe("Query params for GET requests"),
         body: z.record(z.any()).optional().describe("JSON body for POST requests"),
       },
-      async ({ path, method, query, body }) => {
+      async ({
+        path,
+        method,
+        query,
+        body,
+      }: {
+        path: string;
+        method: string;
+        query?: Record<string, unknown>;
+        body?: Record<string, unknown>;
+      }) => {
         if (!path.startsWith("/api/")) {
           throw new Error("path must start with /api/");
         }
