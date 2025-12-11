@@ -2,13 +2,8 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { neon } from "@neondatabase/serverless";
 import { z } from "zod";
 
-// AuthInfo type based on mcp-handler's internal type
-type AuthInfo = {
-  token: string;
-  scopes?: string[];
-  clientId?: string;
-  extra?: Record<string, unknown>;
-};
+// Import AuthInfo from the underlying SDK
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 
 // Initialize database and ensure table exists
 async function getDb() {
@@ -419,10 +414,10 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
 );
 
 // Verify token - the Workflowy API key is the token itself
-const verifyToken = async (
+const verifyToken = (
   _req: Request,
   bearerToken?: string,
-): Promise<AuthInfo | undefined> => {
+): AuthInfo | undefined => {
   if (!bearerToken) {
     return undefined;
   }
