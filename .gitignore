@@ -1,2 +1,20 @@
+# Vercel
 .vercel
+
+# Dependencies
 node_modules
+
+# Next.js build output
+.next
+
+# Lock files (using pnpm)
+package-lock.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
