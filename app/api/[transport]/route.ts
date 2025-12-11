@@ -22,9 +22,50 @@ async function getDb() {
   return sql;
 }
 
+// Helper function for Workflowy API requests
+async function workflowyRequest(
+  path: string,
+  method: "GET" | "POST" | "DELETE",
+  body?: Record<string, unknown>,
+) {
+  const apiKey = process.env.WORKFLOWY_API_KEY;
+  if (!apiKey) {
+    throw new Error("WORKFLOWY_API_KEY is not set in process.env");
+  }
+
+  const url = `https://workflowy.com${path}`;
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text };
+  }
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({ http_status: res.status, ok: res.ok, data }, null, 2),
+      },
+    ],
+  };
+}
+
 const handler = createMcpHandler(
   (server) => {
-    // Bookmark tools
+    // ==================== BOOKMARK TOOLS ====================
+
     server.tool(
       "save_bookmark",
       "Save a Workflowy node ID with a friendly name for easy reference later. Use this to bookmark important nodes like special inboxes, project folders, etc.",
@@ -49,7 +90,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "get_bookmark",
-      "Get a saved Workflowy node ID by its bookmark name. Use this to retrieve node IDs for bookmarked locations.",
+      "Get a saved Workflowy node ID by its bookmark name. Use this to retrieve node IDs for bookmarked locations before creating or moving nodes.",
       {
         name: z.string().describe("The bookmark name to look up"),
       },
@@ -69,7 +110,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "list_bookmarks",
-      "List all saved Workflowy bookmarks. Use this to see what nodes have been bookmarked.",
+      "List all saved Workflowy bookmarks. Use this to see what locations have been bookmarked.",
       {},
       async () => {
         const sql = await getDb();
@@ -100,104 +141,133 @@ const handler = createMcpHandler(
       },
     );
 
-    // Workflowy API tool
-    server.tool(
-      "workflowy_api",
-      `Make requests to the Workflowy API. Available endpoints:
-- POST /api/v1/nodes (create node: name, parent_id required in body)
-- POST /api/v1/nodes/:id (update node)
-- GET /api/v1/nodes/:id (get single node)
-- GET /api/v1/nodes?parent_id=X (list children, parent_id can be UUID, "inbox", "home", or "None" for top-level)
-- DELETE /api/v1/nodes/:id (delete node)
-- POST /api/v1/nodes/:id/move (move node: parent_id required in body)
-- POST /api/v1/nodes/:id/complete (mark complete)
-- POST /api/v1/nodes/:id/uncomplete (mark incomplete)
-- GET /api/v1/nodes-export (export all nodes, rate limit: 1/min)
-- GET /api/v1/targets (get targets like inbox, home)
+    // ==================== WORKFLOWY READ TOOLS ====================
 
-Tip: Use get_bookmark to retrieve saved node IDs for common locations.`,
+    server.tool(
+      "list_nodes",
+      "List child nodes under a parent. Use parent_id='None' for top-level nodes, or use 'inbox'/'home' for those special locations, or a specific node UUID.",
       {
-        path: z
+        parent_id: z
+          .string()
+          .describe("Parent node ID: 'None' for top-level, 'inbox', 'home', or a node UUID"),
+      },
+      async ({ parent_id }: { parent_id: string }) => {
+        return workflowyRequest(`/api/v1/nodes?parent_id=${encodeURIComponent(parent_id)}`, "GET");
+      },
+    );
+
+    server.tool(
+      "get_node",
+      "Get a single node by its ID. Returns the node's name, note, and metadata.",
+      {
+        node_id: z.string().describe("The node UUID to retrieve"),
+      },
+      async ({ node_id }: { node_id: string }) => {
+        return workflowyRequest(`/api/v1/nodes/${node_id}`, "GET");
+      },
+    );
+
+    server.tool(
+      "export_all_nodes",
+      "Export all nodes from the entire Workflowy account. WARNING: Rate limited to 1 request per minute. Use sparingly.",
+      {},
+      async () => {
+        return workflowyRequest("/api/v1/nodes-export", "GET");
+      },
+    );
+
+    server.tool(
+      "get_targets",
+      "Get special Workflowy targets like 'inbox' and 'home'. Useful for discovering available special locations.",
+      {},
+      async () => {
+        return workflowyRequest("/api/v1/targets", "GET");
+      },
+    );
+
+    // ==================== WORKFLOWY WRITE TOOLS ====================
+
+    server.tool(
+      "create_node",
+      "Create a new node (bullet point) in Workflowy. The node will be added as a child of the specified parent.",
+      {
+        name: z.string().describe("The text content of the node"),
+        parent_id: z
           .string()
           .describe(
-            "Workflowy API path starting with /api/v1/... (e.g., /api/v1/nodes?parent_id=None)",
+            "Where to create the node: 'inbox', 'home', 'None' for top-level, or a node UUID",
           ),
-        method: z
-          .enum(["GET", "POST", "DELETE"])
-          .default("GET")
-          .describe("HTTP method for Workflowy"),
-        query: z.record(z.any()).optional().describe("Query params for GET requests"),
-        body: z.record(z.any()).optional().describe("JSON body for POST requests"),
+        note: z.string().optional().describe("Optional note/description for the node"),
       },
-      async ({
-        path,
-        method,
-        query,
-        body,
-      }: {
-        path: string;
-        method: string;
-        query?: Record<string, unknown>;
-        body?: Record<string, unknown>;
-      }) => {
-        if (!path.startsWith("/api/")) {
-          throw new Error("path must start with /api/");
-        }
+      async ({ name, parent_id, note }: { name: string; parent_id: string; note?: string }) => {
+        const body: Record<string, unknown> = { name, parent_id };
+        if (note) body.note = note;
+        return workflowyRequest("/api/v1/nodes", "POST", body);
+      },
+    );
 
-        const apiKey = process.env.WORKFLOWY_API_KEY;
-        if (!apiKey) {
-          throw new Error("WORKFLOWY_API_KEY is not set in process.env (Vercel env vars).");
-        }
+    server.tool(
+      "update_node",
+      "Update an existing node's name or note.",
+      {
+        node_id: z.string().describe("The node UUID to update"),
+        name: z.string().optional().describe("New name/text for the node"),
+        note: z.string().optional().describe("New note for the node"),
+      },
+      async ({ node_id, name, note }: { node_id: string; name?: string; note?: string }) => {
+        const body: Record<string, unknown> = {};
+        if (name !== undefined) body.name = name;
+        if (note !== undefined) body.note = note;
+        return workflowyRequest(`/api/v1/nodes/${node_id}`, "POST", body);
+      },
+    );
 
-        const qs = new URLSearchParams(
-          Object.entries(query || {}).reduce<Record<string, string>>((acc, [k, v]) => {
-            if (v !== undefined && v !== null) acc[k] = String(v);
-            return acc;
-          }, {}),
-        ).toString();
+    server.tool(
+      "delete_node",
+      "Permanently delete a node and all its children. Use with caution.",
+      {
+        node_id: z.string().describe("The node UUID to delete"),
+      },
+      async ({ node_id }: { node_id: string }) => {
+        return workflowyRequest(`/api/v1/nodes/${node_id}`, "DELETE");
+      },
+    );
 
-        const url = `https://workflowy.com${path}${qs ? "?" + qs : ""}`;
+    server.tool(
+      "move_node",
+      "Move a node to a different parent location.",
+      {
+        node_id: z.string().describe("The node UUID to move"),
+        parent_id: z
+          .string()
+          .describe("New parent: 'inbox', 'home', 'None' for top-level, or a node UUID"),
+      },
+      async ({ node_id, parent_id }: { node_id: string; parent_id: string }) => {
+        return workflowyRequest(`/api/v1/nodes/${node_id}/move`, "POST", { parent_id });
+      },
+    );
 
-        const res = await fetch(url, {
-          method,
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body:
-            method === "GET" || method === "DELETE"
-              ? undefined
-              : body
-                ? JSON.stringify(body)
-                : undefined,
-        });
+    // ==================== WORKFLOWY COMPLETION TOOLS ====================
 
-        const text = await res.text();
-        let data: unknown;
-        try {
-          data = text ? JSON.parse(text) : null;
-        } catch {
-          data = { raw: text };
-        }
+    server.tool(
+      "complete_node",
+      "Mark a node as completed (checked off).",
+      {
+        node_id: z.string().describe("The node UUID to mark as complete"),
+      },
+      async ({ node_id }: { node_id: string }) => {
+        return workflowyRequest(`/api/v1/nodes/${node_id}/complete`, "POST");
+      },
+    );
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  path,
-                  method,
-                  http_status: res.status,
-                  ok: res.ok,
-                  data,
-                },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
+    server.tool(
+      "uncomplete_node",
+      "Mark a node as not completed (unchecked).",
+      {
+        node_id: z.string().describe("The node UUID to mark as incomplete"),
+      },
+      async ({ node_id }: { node_id: string }) => {
+        return workflowyRequest(`/api/v1/nodes/${node_id}/uncomplete`, "POST");
       },
     );
   },
