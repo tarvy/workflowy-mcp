@@ -92,22 +92,23 @@
         <div class="card">
             <h2>Step 1: Set Up Access Secret (Vercel)</h2>
             <p>
-                To secure your MCP server, you must set an access secret in your
-                Vercel project settings:
+                To secure your MCP server, set an access secret in your Vercel
+                project settings:
             </p>
             <p>
                 1. Go to your Vercel project &rarr; Settings &rarr; Environment
                 Variables
             </p>
+            <p>2. Add a new variable:</p>
+            <pre>
+Name:  ACCESS_SECRET
+Value: abc123mysecret</pre
+            >
             <p>
-                2. Add a new variable named <code>ACCESS_SECRET</code> with a
-                strong random value
-            </p>
-            <p>
-                3. Generate a secure secret using:
+                Generate a secure secret using:
                 <code>openssl rand -hex 32</code>
             </p>
-            <p>4. Redeploy your project for changes to take effect</p>
+            <p>3. Redeploy your project for changes to take effect</p>
         </div>
 
         <div class="card">
@@ -123,22 +124,16 @@
         <div class="card">
             <h2>Step 3: Configure Your MCP Client</h2>
             <p>
-                This is an MCP (Model Context Protocol) server. Configure your
-                MCP client with:
+                In your MCP client, you combine both values with a colon in the
+                Authorization header:
             </p>
-            <p><strong>URL:</strong> <code>/api/mcp</code></p>
+            <pre>Authorization: Bearer ACCESS_SECRET:WORKFLOWY_API_KEY</pre>
             <p>
-                <strong>Header:</strong>
-                <code
-                    >Authorization: Bearer
-                    YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY</code
-                >
+                For example, if your access secret is
+                <code>abc123mysecret</code> and your Workflowy API key is
+                <code>wf_xyz789</code>, the header would be:
             </p>
-            <p>
-                The bearer token format is
-                <code>ACCESS_SECRET:WORKFLOWY_API_KEY</code> (separated by a
-                colon).
-            </p>
+            <pre>Authorization: Bearer abc123mysecret:wf_xyz789</pre>
         </div>
 
         <div class="card">
@@ -153,7 +148,7 @@
           "type": "streamable-http",
           "url": "https://workflowy-mcp.vercel.app/api/mcp",
           "headers": {
-            "Authorization": "Bearer YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY"
+            "Authorization": "Bearer abc123mysecret:wf_xyz789"
           }
         }
       }
@@ -162,10 +157,17 @@
 }</pre
             >
             <p>
-                Replace <code>YOUR_ACCESS_SECRET</code> with the secret you set
-                in Vercel, and <code>YOUR_WORKFLOWY_API_KEY</code> with your
-                Workflowy API key.
+                Replace <code>abc123mysecret</code> with your access secret from
+                Vercel, and <code>wf_xyz789</code> with your Workflowy API key.
             </p>
+        </div>
+
+        <div class="card">
+            <h2>Summary</h2>
+            <p><strong>In Vercel:</strong> Store the access secret by itself</p>
+            <pre>ACCESS_SECRET = abc123mysecret</pre>
+            <p><strong>In your client:</strong> Combine both with a colon</p>
+            <pre>Bearer abc123mysecret:wf_xyz789</pre>
         </div>
 
         <p class="github">

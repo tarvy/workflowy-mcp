@@ -8,12 +8,14 @@ An MCP (Model Context Protocol) server that connects AI assistants to your Workf
 
 1. Fork or clone this repository
 2. Import the project in Vercel
-3. Add your Neon database URL as an environment variable:
-   - Go to your project settings in Vercel
-   - Navigate to **Environment Variables**
-   - Add a new variable:
-     - Name: `DATABASE_URL`
-     - Value: Your Neon database connection string
+3. Add environment variables in your Vercel project settings:
+   - `DATABASE_URL` - Your Neon database connection string
+   - `ACCESS_SECRET` - A strong random secret to secure your server. Generate one with: `openssl rand -hex 32`
+   
+   Example:
+   ```
+   ACCESS_SECRET = abc123mysecret
+   ```
 4. Deploy the project
 
 ### 2. Get Your Workflowy API Key
@@ -24,7 +26,19 @@ An MCP (Model Context Protocol) server that connects AI assistants to your Workf
 
 ### 3. Connect to Claude Code
 
-Add the MCP server to your Claude Code configuration in `~/.claude.json`, you can ask Claude Code to add the configuration for you:
+In your MCP client, you combine both the access secret and Workflowy API key with a colon in the Authorization header:
+
+```
+Authorization: Bearer ACCESS_SECRET:WORKFLOWY_API_KEY
+```
+
+For example, if your access secret is `abc123mysecret` and your Workflowy API key is `wf_xyz789`:
+
+```
+Authorization: Bearer abc123mysecret:wf_xyz789
+```
+
+Add this to your Claude Code configuration in `~/.claude.json`:
 
 ```json
 {
@@ -35,7 +49,7 @@ Add the MCP server to your Claude Code configuration in `~/.claude.json`, you ca
           "type": "streamable-http",
           "url": "https://workflowy-mcp.vercel.app/api/mcp",
           "headers": {
-            "Authorization": "Bearer <your-workflowy-api-key>"
+            "Authorization": "Bearer abc123mysecret:wf_xyz789"
           }
         }
       }
@@ -44,22 +58,34 @@ Add the MCP server to your Claude Code configuration in `~/.claude.json`, you ca
 }
 ```
 
-Replace `/path/to/your/project` with your actual project directory (or use `/Users/yourusername` for global access).
+Replace:
+- `abc123mysecret` with your access secret from Vercel
+- `wf_xyz789` with your Workflowy API key
+- `/path/to/your/project` with your actual project directory (or use `/Users/yourusername` for global access)
 
 The MCP server should now be available in Claude Code.
 
 ## Authentication
 
-This server requires your Workflowy API key to be passed in the `Authorization` header with every request:
+This server uses a two-part authentication scheme:
 
+1. **Access Secret** - Set in Vercel as `ACCESS_SECRET` environment variable (just the secret, no colon)
+2. **Workflowy API Key** - Your personal API key from Workflowy
+
+**In Vercel** (store the access secret by itself):
 ```
-Authorization: Bearer <your-workflowy-api-key>
+ACCESS_SECRET = abc123mysecret
+```
+
+**In your client** (combine both with a colon):
+```
+Authorization: Bearer abc123mysecret:wf_xyz789
 ```
 
 This design means:
-- The server doesn't store your API key—you provide it with each request
-- Only people with a valid Workflowy API key can use the server
-- You can share the server URL publicly; it's useless without a valid key
+- The server doesn't store credentials—you provide them with each request
+- The access secret prevents unauthorized access even if someone knows your server URL
+- Only requests with both the correct access secret AND a valid Workflowy API key will succeed
 
 ## Available [Workflowy API](https://beta.workflowy.com/api-reference/) Endpoints
 
