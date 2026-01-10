@@ -2,6 +2,7 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { neon } from "@neondatabase/serverless";
 import { z } from "zod";
+import { verifyAccessToken } from "@/lib/oauth";
 
 // Initialize database and ensure table exists
 async function getDb() {
@@ -384,17 +385,31 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
 );
 
 // Token verification function for withMcpAuth
+// Supports both legacy Bearer tokens and OAuth JWT tokens
 const verifyToken = async (
   _req: Request,
   bearerToken?: string,
 ): Promise<AuthInfo | undefined> => {
   if (!bearerToken) return undefined;
 
-  // Token format: "ACCESS_SECRET:WORKFLOWY_API_KEY"
+  // Method 1: Try OAuth JWT token first (starts with "eyJ")
+  if (bearerToken.startsWith("eyJ")) {
+    const jwtResult = verifyAccessToken(bearerToken);
+    if (jwtResult) {
+      return {
+        token: jwtResult.workflowyApiKey,
+        scopes: jwtResult.scope.split(" "),
+        clientId: jwtResult.clientId,
+      };
+    }
+    // JWT verification failed, fall through to legacy check
+  }
+
+  // Method 2: Legacy token format "ACCESS_SECRET:WORKFLOWY_API_KEY"
   const accessSecret = process.env.ACCESS_SECRET;
   if (!accessSecret) {
-    // Without an access secret, all users would share the same database and unauthenticated callers could
-    // access bookmarks. Treat a missing secret as a misconfiguration and reject the request outright.
+    // Without an access secret for legacy tokens, and JWT failed,
+    // reject the request
     return undefined;
   }
 
@@ -423,7 +438,7 @@ const verifyToken = async (
   return {
     token: workflowyApiKey,
     scopes: ["workflowy"],
-    clientId: "workflowy-user",
+    clientId: "legacy-bearer",
   };
 };
 
