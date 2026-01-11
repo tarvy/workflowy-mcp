@@ -1,8 +1,8 @@
 # Step-by-Step Setup Guide
 
 ## Prerequisites
-- ✅ Vercel account linked to GitHub
-- ✅ Access secret: Generate one with `openssl rand -hex 32` (i already have one saved in my workflowy notes :D)
+- Vercel account linked to GitHub
+- Neon database account (free tier works)
 
 ## Step 1: Create Neon Database
 
@@ -19,8 +19,7 @@
 
 3. **Get Your Connection String**
    - Once the project is created, you'll see a dashboard
-   - Look for a "Connection String" or "Connection Details" section
-   - Click on "Connection Details" or the connection string field
+   - Look for "Connection String" or "Connection Details"
    - You should see something like:
      ```
      postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
@@ -38,271 +37,66 @@
    - Click on "Settings" in the top navigation
    - Click on "Environment Variables" in the left sidebar
 
-3. **Add DATABASE_URL**
+3. **Add Required Environment Variables**
+
+   Add each of the following:
+
+   | Key | Value | Description |
+   |-----|-------|-------------|
+   | `DATABASE_URL` | Your Neon connection string | From Step 1 |
+   | `ENCRYPTION_KEY` | `openssl rand -hex 32` | 64-char hex string |
+   | `JWT_SECRET` | `openssl rand -hex 32` | 64-char hex string |
+   | `OAUTH_ISSUER` | `https://your-project.vercel.app` | Your Vercel URL |
+   | `OAUTH_REGISTRATION_SECRET` | `openssl rand -hex 32` | 64-char hex string |
+
+   For each variable:
    - Click "Add New"
-   - **Key:** `DATABASE_URL`
-   - **Value:** Paste the Neon connection string you copied in Step 1
-   - **Environment:** Select "Production", "Preview", and "Development" (or just "Production" if you prefer)
+   - Enter the Key and Value
+   - Select "Production", "Preview", and "Development"
    - Click "Save"
 
-4. **Add ACCESS_SECRET** (for legacy token auth)
-   - Click "Add New" again
-   - **Key:** `ACCESS_SECRET`
-   - **Value:** Your generated access secret (use `openssl rand -hex 32` to generate)
-   - **Environment:** Select "Production", "Preview", and "Development"
-   - Click "Save"
-
-5. **Add OAuth Environment Variables** (for OAuth auth)
-   - `ENCRYPTION_KEY`: 64-character hex string (use `openssl rand -hex 32`)
-   - `JWT_SECRET`: 64-character hex string (use `openssl rand -hex 32`)
-   - `OAUTH_ISSUER`: Your Vercel URL (e.g., `https://workflowy-mcp.vercel.app`)
-   - `OAUTH_REGISTRATION_SECRET`: 64-character hex string (use `openssl rand -hex 32`) - protects client registration
-
-6. **Redeploy Your Project**
+4. **Redeploy Your Project**
    - Go to the "Deployments" tab
    - Find your latest deployment
-   - Click the three dots (⋯) menu
-   - Click "Redeploy"
-   - Or push a new commit to trigger a redeploy
+   - Click the three dots menu → "Redeploy"
 
 ## Step 3: Get Your Workflowy API Key
 
-**Important:** The server does NOT store your Workflowy API key. You'll need to provide it in your client configuration (Cursor/Claude Code). This is by design - it means:
-- The server doesn't need to store user credentials
-- You can use your own personal Workflowy API key
-- Multiple users can use the same server with their own keys
-
 1. **Go to Workflowy API Reference**
-   - Visit https://beta.workflowy.com/api-reference/
-   - You may need to log in to your Workflowy account
+   - Visit https://workflowy.com/api/
+   - Log in to your Workflowy account if needed
 
 2. **Generate/Copy Your API Key**
    - Look for your API key on the page
-   - If you don't have one, there should be a button to generate it
-   - **Copy your API key** - it will look something like `wf_xxxxxxxxxxxxx`
-   - Keep this secure - you'll need it for the next step (you'll add it to your Cursor/Claude Code config)
+   - If you don't have one, generate it
+   - **Copy your API key** - it looks like `wf_xxxxxxxxxxxxx`
 
-## Step 4: Configure MCP Client
+## Step 4: Connect Claude to Your MCP Server
 
-**📋 For quick copy-paste configuration snippets, see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md)**
-
-The following sections provide detailed instructions. For Claude Code, Claude Desktop, Claude Mobile App, Cursor, and GPT Codex setup with ready-to-use code snippets, refer to the [MCP Client Setup Guide](./MCP_CLIENT_SETUP.md).
-
-### Configure MCP Client (Claude Code)
-
-1. **Find Your Claude Code Config File**
-   - The config file is located at `~/.claude.json`
-   - On macOS/Linux, this is `/Users/yourusername/.claude.json`
-
-2. **Edit the Config File**
-   - Open `~/.claude.json` in a text editor
-   - If it doesn't exist, create it
-
-3. **Add MCP Server Configuration**
-   - Add or update the configuration with your project path and MCP server details
-   - Replace the following values:
-     - `ACCESS_SECRET`: `YOUR_ACCESS_SECRET` (generate with `openssl rand -hex 32`)
-     - `WORKFLOWY_API_KEY`: Your Workflowy API key from Step 3
-     - `/path/to/your/project`: Your actual project directory (or use `/Users/travis` for global access)
-     - `https://workflowy-mcp.vercel.app`: Your actual Vercel deployment URL (check your Vercel dashboard)
-
-   Example configuration:
-   ```json
-   {
-     "projects": {
-       "/Users/travis/Dev/workflowy-mcp": {
-         "mcpServers": {
-           "workflowy": {
-             "type": "streamable-http",
-             "url": "https://your-project-name.vercel.app/api/mcp",
-             "headers": {
-               "Authorization": "Bearer YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY"
-             }
-           }
-         }
-       }
-     }
-   }
+1. **Open Claude Desktop**
+2. **Go to Settings → Connectors**
+3. **Click "Add Connector"**
+4. **Enter your MCP Server URL:**
    ```
-
-4. **Save the File**
-   - Save `~/.claude.json`
-   - Restart Claude Code if it's running
-
-### Configure MCP Client (Claude Desktop)
-
-1. **Find Your Claude Desktop Config File**
-   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
-
-2. **Edit the Config File**
-   - Open the config file in a text editor
-   - If it doesn't exist, create it (and the directory if needed)
-
-3. **Add MCP Server Configuration**
-   - Replace the following values:
-     - `ACCESS_SECRET`: `YOUR_ACCESS_SECRET` (generate with `openssl rand -hex 32`)
-     - `WORKFLOWY_API_KEY`: Your Workflowy API key from Step 3
-     - `https://workflowy-mcp.vercel.app`: Your actual Vercel deployment URL (check your Vercel dashboard)
-
-   Example configuration:
-   ```json
-   {
-     "mcpServers": {
-       "workflowy": {
-         "type": "streamable-http",
-         "url": "https://your-project-name.vercel.app/api/mcp",
-         "headers": {
-           "Authorization": "Bearer YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY"
-         }
-       }
-     }
-   }
+   https://your-project-name.vercel.app/api/mcp
    ```
+5. **Click "Connect"**
+6. **Enter your Workflowy API key** when prompted
+7. **Click "Authorize"**
 
-4. **Save the File**
-   - Save the config file
-   - Restart Claude Desktop if it's running
+## Step 5: Verify Setup
 
-### Configure MCP Client (Claude Mobile App)
-
-**Important:** You cannot add new MCP connectors directly from the mobile app. You must configure them first via **Claude Desktop** or **Claude Web**, and then they will be available on mobile.
-
-#### Step 1: Configure via Claude Desktop or Claude Web
-
-1. **Open Claude Desktop or Claude Web App**
-   - Desktop: Open the Claude Desktop application
-   - Web: Go to https://claude.ai
-
-2. **Go to Settings**
-   - Click on your profile icon (bottom left)
-   - Select "Settings"
-   - Click on the "Connectors" tab
-
-3. **Add Custom Connector**
-   - Click "Add custom connector"
-   - **Name:** `workflowy` (or any name you prefer)
-   - **Remote MCP server URL:** `https://your-project-name.vercel.app/api/mcp`
-   - Replace `https://your-project-name.vercel.app` with your actual Vercel deployment URL
-   - Click "Add"
-
-4. **Connect and Authenticate**
-   - After adding, click "Connect" next to the connector
-   - When prompted for authentication, select "Bearer Token" or similar option
-   - **Important:** Enter the combined token in this format: `YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY`
-     - Replace `YOUR_ACCESS_SECRET` with your actual access secret (from Vercel environment variables)
-     - Replace `YOUR_WORKFLOWY_API_KEY` with your actual Workflowy API key from Step 3
-     - Example: If your access secret is `abc123` and your Workflowy API key is `wf_xyz789`, enter: `abc123:wf_xyz789`
-   - The connector will send this as `Authorization: Bearer YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY`
-
-**Note:** The server expects the token in the format `ACCESS_SECRET:WORKFLOWY_API_KEY` (with a colon separator). Make sure to include both parts when entering the Bearer token.
-
-#### Step 2: Use on Mobile
-
-Once configured via Desktop or Web:
-
-1. **Open Claude Mobile App**
-2. **Start a Conversation**
-3. **Enable Connector**
-   - Tap the "+" button (lower left of chat interface)
-   - Select "Connectors"
-   - Toggle on the `workflowy` connector for the conversation
-
-**Important Notes:**
-- **Plan Requirements:** Custom connectors using remote MCP are available on Pro, Max, Team, and Enterprise plans
-- **Mobile Limitation:** You can only USE connectors on mobile that were configured via Desktop or Web
-- The connector will be available on all your devices (Desktop, Web, and Mobile) once configured
-
-### Configure MCP Client (Cursor)
-
-You can configure Cursor in one of two ways:
-
-### Option A: Configuration File (Recommended)
-
-1. **Find Your Cursor MCP Config File**
-   - The config file is located at `~/.cursor/mcp.json`
-   - On macOS/Linux, this is `/Users/yourusername/.cursor/mcp.json`
-
-2. **Edit the Config File**
-   - Open `~/.cursor/mcp.json` in a text editor
-   - If it doesn't exist, create it (and the `.cursor` directory if needed)
-
-3. **Add MCP Server Configuration**
-   - Replace the following values:
-     - `ACCESS_SECRET`: `YOUR_ACCESS_SECRET` (generate with `openssl rand -hex 32`)
-     - `WORKFLOWY_API_KEY`: Your Workflowy API key from Step 3
-     - `https://workflowy-mcp.vercel.app`: Your actual Vercel deployment URL (check your Vercel dashboard)
-
-   Example configuration:
-   ```json
-   {
-     "mcpServers": {
-       "workflowy": {
-         "type": "streamable-http",
-         "url": "https://your-project-name.vercel.app/api/mcp",
-         "headers": {
-           "Authorization": "Bearer YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY"
-         }
-       }
-     }
-   }
-   ```
-
-4. **Save the File**
-   - Save `~/.cursor/mcp.json`
-   - Restart Cursor if it's running
-
-### Option B: Cursor Settings UI
-
-1. **Open Cursor Settings**
-   - Press `Cmd+,` (Mac) or `Ctrl+,` (Windows/Linux)
-   - Or go to Cursor → Settings (Mac) / File → Preferences → Settings (Windows/Linux)
-
-2. **Navigate to MCP Settings**
-   - Search for "MCP" or "Model Context Protocol" in the settings search bar
-   - Or navigate to Features → Model Context Protocol
-
-3. **Add MCP Server**
-   - Click "Add Server" or "Edit Servers"
-   - Fill in the following:
-     - **Name:** `workflowy`
-     - **Type:** `streamable-http`
-     - **URL:** `https://your-project-name.vercel.app/api/mcp`
-     - **Headers:** 
-       ```json
-       {
-         "Authorization": "Bearer YOUR_ACCESS_SECRET:YOUR_WORKFLOWY_API_KEY"
-       }
-       ```
-   - Replace `YOUR_WORKFLOWY_API_KEY` with your actual Workflowy API key from Step 3
-   - Replace `https://your-project-name.vercel.app` with your actual Vercel deployment URL
-
-4. **Save and Restart**
-   - Save the settings
-   - Restart Cursor for the changes to take effect
-
-## Step 6: Verify Setup
-
-1. **Check Vercel Deployment**
-   - Make sure your Vercel deployment is successful
-   - Check the deployment logs for any errors
-
-2. **Test the Connection**
-   - In Claude Code, try asking: "Show me my top Workflowy notes"
-   - In Claude Desktop, try asking: "Show me my top Workflowy notes"
-   - In Claude Mobile App, try asking: "Show me my top Workflowy notes"
-   - In Cursor, try asking: "Show me my top Workflowy notes"
-   - In GPT Codex, try asking: "Show me my top Workflowy notes"
-   - If it works, you're all set!
+Try asking Claude:
+- "Show me my top Workflowy notes"
+- "List my Workflowy bookmarks"
+- "Create a note called 'Test' in my inbox"
 
 ## Troubleshooting
 
 - **Database connection errors**: Double-check your `DATABASE_URL` in Vercel
-- **Authentication errors**: Verify both `ACCESS_SECRET` and Workflowy API key are correct
+- **OAuth errors**: Verify all environment variables are set correctly
 - **404 errors**: Make sure your Vercel URL includes `/api/mcp` at the end
-- **CORS errors**: Check that your Vercel project is properly deployed
-- **"Why do I need to provide my Workflowy API key in the client?"**: The server uses a pass-through authentication model - it doesn't store your Workflowy API key. The server only stores the `ACCESS_SECRET` (to protect the server), and you provide your Workflowy API key in the client config. This allows multiple users to use the same server with their own keys.
+- **Authorization failures**: Re-do the OAuth flow in Claude's Connectors settings
 
 ## Next Steps
 

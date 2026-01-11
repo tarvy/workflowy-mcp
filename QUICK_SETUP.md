@@ -2,7 +2,6 @@
 
 ## Environment Variables Required
 
-For **OAuth** (Claude Desktop/Web/Mobile):
 ```
 DATABASE_URL=postgresql://...
 ENCRYPTION_KEY=<64-char hex from: openssl rand -hex 32>
@@ -11,14 +10,7 @@ OAUTH_ISSUER=https://your-vercel-url.vercel.app
 OAUTH_REGISTRATION_SECRET=<64-char hex from: openssl rand -hex 32>
 ```
 
-For **Legacy Token** (Claude Code/Cursor/GPT Codex):
-```
-ACCESS_SECRET=<from: openssl rand -hex 32>
-```
-
-## 🚀 Quick Start
-
-### For Claude Desktop / Web (OAuth)
+## Quick Start
 
 1. **Deploy to Vercel** with the environment variables above
 2. **In Claude:** Settings → Connectors → Add Connector
@@ -26,15 +18,8 @@ ACCESS_SECRET=<from: openssl rand -hex 32>
 4. **Click Connect** → Enter your Workflowy API key → Authorize
 5. **Done!**
 
-### For Claude Code / Cursor (Legacy Token)
-
-1. **Deploy to Vercel** with `ACCESS_SECRET` set
-2. **Get your Workflowy API key** from https://workflowy.com/api/
-3. **Configure your client** (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md))
-4. **Test:** "Show me my top Workflowy notes"
-
-## 📝 Important Notes
+## Important Notes
 
 - MCP URL format: `https://your-vercel-url.vercel.app/api/mcp`
-- Legacy token format: `Bearer ACCESS_SECRET:WORKFLOWY_API_KEY`
+- Get your Workflowy API key from https://workflowy.com/api/
 - OAuth tables are auto-created on first use

@@ -385,61 +385,24 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
 );
 
 // Token verification function for withMcpAuth
-// Supports both legacy Bearer tokens and OAuth JWT tokens
+// Supports OAuth JWT tokens only
 const verifyToken = async (
   _req: Request,
   bearerToken?: string,
 ): Promise<AuthInfo | undefined> => {
   if (!bearerToken) return undefined;
 
-  // Method 1: Try OAuth JWT token first (starts with "eyJ")
-  if (bearerToken.startsWith("eyJ")) {
-    const jwtResult = verifyAccessToken(bearerToken);
-    if (jwtResult) {
-      return {
-        token: jwtResult.workflowyApiKey,
-        scopes: jwtResult.scope.split(" "),
-        clientId: jwtResult.clientId,
-      };
-    }
-    // JWT verification failed, fall through to legacy check
+  // Verify OAuth JWT token
+  const jwtResult = verifyAccessToken(bearerToken);
+  if (jwtResult) {
+    return {
+      token: jwtResult.workflowyApiKey,
+      scopes: jwtResult.scope.split(" "),
+      clientId: jwtResult.clientId,
+    };
   }
 
-  // Method 2: Legacy token format "ACCESS_SECRET:WORKFLOWY_API_KEY"
-  const accessSecret = process.env.ACCESS_SECRET;
-  if (!accessSecret) {
-    // Without an access secret for legacy tokens, and JWT failed,
-    // reject the request
-    return undefined;
-  }
-
-  const separator = ":";
-  const separatorIndex = bearerToken.indexOf(separator);
-
-  if (separatorIndex <= 0) {
-    // No secret provided or colon at first position (empty secret), reject
-    return undefined;
-  }
-
-  const providedSecret = bearerToken.slice(0, separatorIndex);
-  if (providedSecret !== accessSecret) {
-    // Secret doesn't match, reject
-    return undefined;
-  }
-
-  // Extract the actual Workflowy API key after the secret
-  const workflowyApiKey = bearerToken.slice(separatorIndex + 1);
-
-  if (!workflowyApiKey) {
-    // No API key after secret, reject
-    return undefined;
-  }
-
-  return {
-    token: workflowyApiKey,
-    scopes: ["workflowy"],
-    clientId: "legacy-bearer",
-  };
+  return undefined;
 };
 
 // Wrap handler with auth - makes authInfo available in tool handlers via extra.authInfo
