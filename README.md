@@ -36,6 +36,8 @@ Authorization: Bearer ACCESS_SECRET:WORKFLOWY_API_KEY
 
 Quick links:
 - **Claude Code**: Configure in `~/.claude.json` (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md#claude-code))
+- **Claude Desktop**: Configure in `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md#claude-desktop))
+- **Claude Mobile App**: Configure in app settings (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md#claude-mobile-app))
 - **Cursor**: Configure in `~/.cursor/mcp.json` (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md#cursor))
 - **GPT Codex**: Configure in `~/.codex/config.toml` (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md#gpt-codex))
 

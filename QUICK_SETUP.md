@@ -4,13 +4,13 @@
 
 1. **Neon Database**: Set up and ready
    - Project: `workflowy-mcp` (noisy-poetry-29611987)
-   - Connection String: `postgresql://neondb_owner:npg_NQf5vXGPeix7@ep-twilight-salad-ah1ciaes-pooler.c-3.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require`
+   - Connection String: `postgresql://neondb_owner:YOUR_PASSWORD@ep-xxx-xxx.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require`
 
 2. **Vercel Project**: Imported and configured
    - Project Name: `workflowy-mcp`
    - Environment Variables Added:
      - `DATABASE_URL`: Your Neon connection string
-     - `ACCESS_SECRET`: `fce625966d398a6a34200b4778185db96785114731bf6fce40aa2b241ee06ee2`
+     - `ACCESS_SECRET`: `YOUR_ACCESS_SECRET` (generate with `openssl rand -hex 32`)
 
 ## 🚀 Next Steps
 
