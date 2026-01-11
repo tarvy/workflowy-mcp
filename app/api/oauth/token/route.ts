@@ -22,10 +22,16 @@ import {
 } from "@/lib/oauth";
 import type { TokenResponse, OAuthError } from "@/lib/types";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 function errorResponse(error: string, description: string, status: number = 400): NextResponse<OAuthError> {
   return NextResponse.json(
     { error, error_description: description } as OAuthError,
-    { status }
+    { status, headers: corsHeaders }
   );
 }
 
@@ -56,6 +62,20 @@ function extractClientCredentials(
   }
 
   return null;
+}
+
+/**
+ * OPTIONS /api/oauth/token - CORS preflight
+ */
+export async function OPTIONS(): Promise<NextResponse> {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
 }
 
 /**
@@ -175,7 +195,7 @@ async function handleAuthorizationCode(
     scope: "workflowy",
   };
 
-  return NextResponse.json(response);
+  return NextResponse.json(response, { headers: corsHeaders });
 }
 
 /**
@@ -253,5 +273,5 @@ async function handleRefreshToken(
     scope: storedToken.scope,
   };
 
-  return NextResponse.json(response);
+  return NextResponse.json(response, { headers: corsHeaders });
 }
