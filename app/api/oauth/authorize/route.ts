@@ -51,6 +51,7 @@ function renderConsentForm(params: {
       max-width: 420px;
       width: 100%;
       box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      text-align: center;
     }
     h1 {
       font-size: 24px;
@@ -71,6 +72,7 @@ function renderConsentForm(params: {
       margin-bottom: 8px;
       font-size: 14px;
       color: #aaa;
+      text-align: left;
     }
     input[type="password"] {
       width: 100%;
@@ -90,6 +92,7 @@ function renderConsentForm(params: {
       font-size: 13px;
       color: #666;
       margin-bottom: 24px;
+      text-align: left;
     }
     .help-text a {
       color: #6c9fff;
@@ -125,6 +128,7 @@ function renderConsentForm(params: {
       border-radius: 8px;
       margin-bottom: 16px;
       font-size: 14px;
+      text-align: left;
     }
     .scope-badge {
       display: inline-block;
@@ -135,43 +139,146 @@ function renderConsentForm(params: {
       color: #6c9fff;
       margin-bottom: 24px;
     }
+    .hidden { display: none; }
+    .success-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    .success-message {
+      font-size: 20px;
+      color: #4ade80;
+      margin-bottom: 8px;
+    }
+    .success-subtitle {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .fun-message {
+      font-size: 18px;
+      color: #6c9fff;
+      font-style: italic;
+    }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #333;
+      border-top-color: #6c9fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Connect to Workflowy</h1>
-    <p class="subtitle">
-      ${params.clientName ? `<span class="client-name">${escapeHtml(params.clientName)}</span> wants to` : "An application wants to"}
-      access your Workflowy account
-    </p>
-    <div class="scope-badge">Scope: ${escapeHtml(params.scope)}</div>
-    ${errorHtml}
-    <form method="POST" action="/api/oauth/authorize">
-      <input type="hidden" name="client_id" value="${escapeHtml(params.clientId)}">
-      <input type="hidden" name="redirect_uri" value="${escapeHtml(params.redirectUri)}">
-      <input type="hidden" name="code_challenge" value="${escapeHtml(params.codeChallenge)}">
-      <input type="hidden" name="code_challenge_method" value="${escapeHtml(params.codeChallengeMethod)}">
-      ${params.state ? `<input type="hidden" name="state" value="${escapeHtml(params.state)}">` : ""}
-      <input type="hidden" name="scope" value="${escapeHtml(params.scope)}">
-
-      <label for="workflowy_api_key">Workflowy API Key</label>
-      <input
-        type="password"
-        id="workflowy_api_key"
-        name="workflowy_api_key"
-        placeholder="wf_xxxxxxxxxxxxx"
-        required
-        autocomplete="off"
-      >
-      <p class="help-text">
-        Get your API key from
-        <a href="https://beta.workflowy.com/api-reference/" target="_blank" rel="noopener">
-          Workflowy API Reference
-        </a>
+    <!-- Form State -->
+    <div id="form-state">
+      <h1>Connect to Workflowy</h1>
+      <p class="subtitle">
+        ${params.clientName ? `<span class="client-name">${escapeHtml(params.clientName)}</span> wants to` : "An application wants to"}
+        access your Workflowy account
       </p>
-      <button type="submit">Authorize</button>
-    </form>
+      <div class="scope-badge">Scope: ${escapeHtml(params.scope)}</div>
+      ${errorHtml}
+      <form id="auth-form" method="POST" action="/api/mcp/oauth/authorize">
+        <input type="hidden" name="client_id" value="${escapeHtml(params.clientId)}">
+        <input type="hidden" name="redirect_uri" value="${escapeHtml(params.redirectUri)}">
+        <input type="hidden" name="code_challenge" value="${escapeHtml(params.codeChallenge)}">
+        <input type="hidden" name="code_challenge_method" value="${escapeHtml(params.codeChallengeMethod)}">
+        ${params.state ? `<input type="hidden" name="state" value="${escapeHtml(params.state)}">` : ""}
+        <input type="hidden" name="scope" value="${escapeHtml(params.scope)}">
+
+        <label for="workflowy_api_key">Workflowy API Key</label>
+        <input
+          type="password"
+          id="workflowy_api_key"
+          name="workflowy_api_key"
+          placeholder="wf_xxxxxxxxxxxxx"
+          required
+          autocomplete="off"
+        >
+        <p class="help-text">
+          Get your API key from
+          <a href="https://workflowy.com/api/" target="_blank" rel="noopener">
+            Workflowy API Settings
+          </a>
+        </p>
+        <button type="submit" id="submit-btn">Authorize</button>
+      </form>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="hidden">
+      <h1>Connecting...</h1>
+      <p class="subtitle">
+        <span class="spinner"></span>
+        Validating your Workflowy API key
+      </p>
+    </div>
+
+    <!-- Success State -->
+    <div id="success-state" class="hidden">
+      <div class="success-icon">&#10003;</div>
+      <p class="success-message">You're all set!</p>
+      <p class="success-subtitle">Nothing to do here...</p>
+      <p class="fun-message">Let's get Workflowy, baby!</p>
+    </div>
   </div>
+
+  <script>
+    const form = document.getElementById('auth-form');
+    const formState = document.getElementById('form-state');
+    const loadingState = document.getElementById('loading-state');
+    const successState = document.getElementById('success-state');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Show loading state
+      formState.classList.add('hidden');
+      loadingState.classList.remove('hidden');
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          redirect: 'manual'
+        });
+
+        // Check if it's a redirect (success)
+        if (response.type === 'opaqueredirect' || response.status === 302 || response.status === 0) {
+          // Show success state
+          loadingState.classList.add('hidden');
+          successState.classList.remove('hidden');
+
+          // Wait a moment then submit normally to follow redirect
+          setTimeout(() => {
+            form.submit();
+          }, 1500);
+        } else if (response.ok) {
+          // Server returned HTML (likely error form)
+          const html = await response.text();
+          document.body.innerHTML = html;
+        } else {
+          // Error response
+          const html = await response.text();
+          document.body.innerHTML = html;
+        }
+      } catch (error) {
+        // Network error - fall back to normal form submit
+        form.submit();
+      }
+    });
+  </script>
 </body>
 </html>`;
 }
