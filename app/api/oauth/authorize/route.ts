@@ -354,5 +354,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   console.log("[AUTHORIZE POST] Code generated:", code.substring(0, 10) + "...");
   console.log("[AUTHORIZE POST] State:", state);
 
-  return NextResponse.redirect(url.toString());
+  // Use 302 redirect to convert POST to GET (307 would preserve POST method)
+  return NextResponse.redirect(url.toString(), 302);
 }
