@@ -1,14 +1,58 @@
 # MCP Client Setup Guide
 
-Quick copy-paste configuration snippets for adding the Workflowy MCP server to Claude Code, Cursor, and GPT Codex.
+This guide covers setting up the Workflowy MCP server with various AI clients.
 
-## Prerequisites
+## Authentication Methods
 
-Before configuring any client, you'll need:
+| Client | Recommended Method |
+|--------|-------------------|
+| Claude Desktop | **OAuth** (automatic) |
+| Claude Web | **OAuth** (automatic) |
+| Claude Mobile | **OAuth** (via Desktop/Web) |
+| Claude Code | Legacy Bearer Token |
+| Cursor | Legacy Bearer Token |
+| GPT Codex | Legacy Bearer Token |
+
+---
+
+## OAuth Setup (Claude Desktop / Web / Mobile)
+
+### Claude Desktop - OAuth (Recommended)
+
+1. **Open Claude Desktop**
+2. **Go to Settings** → **Connectors**
+3. **Click "Add Connector"**
+4. **Enter the MCP Server URL:**
+   ```
+   https://YOUR-VERCEL-URL.vercel.app/api/mcp
+   ```
+5. **Click "Connect"**
+6. **You'll be redirected to an authorization page:**
+   - Enter your Workflowy API key (get it from https://workflowy.com/api/)
+   - Click "Authorize"
+7. **Done!** The connector will show as connected.
+
+### Claude Web - OAuth
+
+Same steps as Claude Desktop - add connector in Settings → Connectors.
+
+### Claude Mobile
+
+Configure via Claude Desktop or Web first, then the connector will be available on mobile.
+
+---
+
+## Legacy Bearer Token Setup
+
+For clients that don't support OAuth (Claude Code, Cursor, GPT Codex), use the legacy bearer token method.
+
+### Prerequisites
+
+Before configuring, you'll need:
 
 1. **Your Vercel deployment URL** - Something like `https://your-project.vercel.app`
 2. **Your ACCESS_SECRET** - The secret you set in Vercel environment variables
-3. **Your Workflowy API Key** - Get it from https://beta.workflowy.com/api-reference/
+3. **Your Workflowy API Key** - Get it from https://workflowy.com/api/
 
 The authorization header format is: `Bearer ACCESS_SECRET:WORKFLOWY_API_KEY`
 
@@ -87,43 +131,18 @@ If you already have a `~/.claude.json` file, just add the `workflowy` server to 
 
 ---
 
-## Claude Desktop
+## Claude Desktop (Legacy Config File Method)
 
-You can configure Claude Desktop in two ways:
-
-### Method 1: Direct Config File (Recommended - More Reliable)
+If you prefer manual configuration instead of OAuth, you can use the config file method.
 
 **Config File Location:**
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-#### Full Configuration
-
-Create the config file if it doesn't exist, then add:
-
 ```json
 {
   "mcpServers": {
-    "workflowy": {
-      "type": "streamable-http",
-      "url": "https://YOUR-VERCEL-URL.vercel.app/api/mcp",
-      "headers": {
-        "Authorization": "Bearer ACCESS_SECRET:WORKFLOWY_API_KEY"
-      }
-    }
-  }
-}
-```
-
-#### Adding to Existing Config
-
-If you already have a `claude_desktop_config.json` file, just add the `workflowy` server to your existing `mcpServers` object:
-
-```json
-{
-  "mcpServers": {
-    "existing-server": { ... },
     "workflowy": {
       "type": "streamable-http",
       "url": "https://YOUR-VERCEL-URL.vercel.app/api/mcp",
@@ -137,82 +156,22 @@ If you already have a `claude_desktop_config.json` file, just add the `workflowy
 
 **After saving:** Restart Claude Desktop for changes to take effect.
 
-### Method 2: Connectors UI (Alternative)
-
-You can also configure via the Connectors UI in Settings, but the config file method is more reliable for custom Bearer token authentication. See the [Claude Mobile App](#claude-mobile-app) section for connector setup instructions.
-
 ---
 
 ## Claude Mobile App
 
-**Important:** You cannot add new MCP connectors directly from the mobile app. You must configure them first via **Claude Desktop** or **Claude Web**, and then they will be available on mobile.
+**Note:** You cannot add MCP connectors directly from mobile. Configure via Claude Desktop or Claude Web first, then it will sync to mobile.
 
-### Step 1: Configure via Claude Desktop or Claude Web
+### Setup (via OAuth)
 
-#### Option A: Claude Desktop (Recommended)
-
-1. **Open Claude Desktop**
-2. **Go to Settings**
-   - Click on your profile icon (bottom left)
-   - Select "Settings"
-   - Click on the "Connectors" tab
-
-3. **Add Custom Connector**
-   - Click "Add custom connector"
-   - **Name:** `workflowy` (or any name you prefer)
-   - **Remote MCP server URL:** `https://YOUR-VERCEL-URL.vercel.app/api/mcp`
-   - Click "Add"
-
-4. **Connect and Authenticate**
-   - After adding, click "Connect" next to the connector
-   - When prompted for authentication, you'll need to provide a **Bearer Token**
-   - **Important:** Enter the combined token in this format: `ACCESS_SECRET:WORKFLOWY_API_KEY`
-     - Replace `ACCESS_SECRET` with your actual access secret (from Vercel environment variables)
-     - Replace `WORKFLOWY_API_KEY` with your actual Workflowy API key
-     - Example: If your access secret is `abc123` and your Workflowy API key is `wf_xyz789`, enter: `abc123:wf_xyz789`
-   - The connector will send this as `Authorization: Bearer ACCESS_SECRET:WORKFLOWY_API_KEY`
-
-**Note:** The server expects the token in the format `ACCESS_SECRET:WORKFLOWY_API_KEY` (with a colon separator). Make sure to include both parts when entering the Bearer token.
-
-**Alternative:** If the connector interface doesn't support Bearer token authentication, you can use the direct configuration file method instead (see the [Claude Desktop](#claude-desktop) section above for config file setup).
-
-#### Option B: Claude Web App
-
-1. **Open Claude Web App** (https://claude.ai)
-2. **Go to Settings**
-   - Click on your profile icon (bottom left)
-   - Select "Settings"
-   - Click on the "Connectors" tab
-
-3. **Add Custom Connector**
-   - Click "Add custom connector"
-   - **Name:** `workflowy`
-   - **Remote MCP server URL:** `https://YOUR-VERCEL-URL.vercel.app/api/mcp`
-   - Click "Add"
-
-4. **Connect and Authenticate**
-   - Click "Connect" next to the connector
-   - Follow authentication prompts
-
-### Step 2: Use on Mobile
-
-Once configured via Desktop or Web:
-
-1. **Open Claude Mobile App**
-2. **Start a Conversation**
-3. **Enable Connector**
-   - Tap the "+" button (lower left of chat interface)
-   - Select "Connectors"
-   - Toggle on the `workflowy` connector for the conversation
+1. **On Claude Desktop or Web:** Add the connector using the OAuth method described above
+2. **On Mobile:** Open Claude Mobile → tap "+" → Connectors → enable "workflowy"
 
 ### Important Notes
 
-- **Plan Requirements:** Custom connectors using remote MCP are available on Pro, Max, Team, and Enterprise plans
-- **Mobile Limitation:** You can only USE connectors on mobile that were configured via Desktop or Web
-- **Authorization:** Your server uses `Bearer ACCESS_SECRET:WORKFLOWY_API_KEY` format. Ensure this is configured correctly in the connector settings
-- **Security:** Only connect to trusted servers and review permissions carefully
-
-**After configuring:** The connector will be available on all your devices (Desktop, Web, and Mobile).
+- **Plan Requirements:** Custom connectors are available on Pro, Max, Team, and Enterprise plans
+- **Sync:** Connectors configured on Desktop/Web automatically sync to Mobile
+- **Security:** Only connect to trusted servers
 
 ---
 

@@ -2,20 +2,48 @@
 
 An MCP (Model Context Protocol) server that connects AI assistants to your Workflowy account, allowing them to read, create, update, and manage your Workflowy notes.
 
-## Setup
+## Features
+
+- **OAuth 2.0 Authentication** - Secure OAuth flow with PKCE for Claude Desktop, Claude Web, and other MCP clients
+- **Legacy Token Support** - Bearer token authentication for programmatic access
+- **Full Workflowy API** - Read, create, update, delete, and organize notes
+
+## Quick Start
+
+### For Claude Desktop / Claude Web (OAuth - Recommended)
+
+1. **Deploy to Vercel** (see [Deployment](#deployment) below)
+2. **Add MCP Server in Claude:**
+   - Open Claude Desktop → Settings → Connectors
+   - Click "Add Connector"
+   - Enter URL: `https://your-vercel-url.vercel.app/api/mcp`
+   - Click "Connect" and follow the OAuth flow
+   - Enter your Workflowy API key when prompted
+3. **Done!** Start using Workflowy with Claude
+
+### For Claude Code / Cursor / Other Clients (Legacy Token)
+
+See [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md) for detailed configuration.
+
+---
+
+## Deployment
 
 ### 1. Deploy to [Vercel](https://vercel.com/new)
 
 1. Fork or clone this repository
 2. Import the project in Vercel
-3. Add environment variables in your Vercel project settings (ACCESS_SECRET is required; requests are rejected when it's not set):
+3. Add environment variables in your Vercel project settings:
+
+   **Required for OAuth:**
    - `DATABASE_URL` - Your Neon database connection string
-   - `ACCESS_SECRET` - A strong random secret to secure your server. Generate one with: `openssl rand -hex 32`
-   
-   Example:
-   ```
-   ACCESS_SECRET = abc123mysecret
-   ```
+   - `ENCRYPTION_KEY` - 64-character hex string: `openssl rand -hex 32`
+   - `JWT_SECRET` - 64-character hex string: `openssl rand -hex 32`
+   - `OAUTH_ISSUER` - Your Vercel URL (e.g., `https://workflowy-mcp.vercel.app`)
+
+   **Required for Legacy Token Auth:**
+   - `ACCESS_SECRET` - A strong random secret: `openssl rand -hex 32`
+
 4. Deploy the project
 
 ### 2. Get Your Workflowy API Key
@@ -45,31 +73,44 @@ After configuring, restart your client for changes to take effect.
 
 ## Authentication
 
-This server uses a **pass-through authentication** model:
+This server supports two authentication methods:
 
-1. **Access Secret** - Set in Vercel as `ACCESS_SECRET` environment variable (protects the server itself)
-2. **Workflowy API Key** - Your personal API key from Workflowy (sent with each request)
+### Method 1: OAuth 2.0 (Recommended)
 
-**Important:** The server does NOT store your Workflowy API key. Instead:
-- The server only stores the `ACCESS_SECRET` in Vercel (to prevent unauthorized access to the server)
-- You provide your Workflowy API key in the client configuration
-- The server validates the access secret, then uses your Workflowy API key to make requests to Workflowy
+For **Claude Desktop**, **Claude Web**, and **Claude Mobile**:
 
-**In Vercel** (store only the access secret):
+1. Add the MCP server URL in Claude's Connectors settings
+2. Click "Connect" - you'll be redirected to an authorization page
+3. Enter your Workflowy API key (get it from https://workflowy.com/api/)
+4. Click "Authorize" - you're connected!
+
+**How it works:**
+- Uses OAuth 2.0 with PKCE (RFC 7636) for secure authentication
+- Your Workflowy API key is encrypted and embedded in JWT tokens
+- Tokens auto-refresh, so you stay connected
+- No manual token configuration needed
+
+### Method 2: Legacy Bearer Token
+
+For **Claude Code**, **Cursor**, **GPT Codex**, and programmatic access:
+
+**In Vercel** (set the access secret):
 ```
 ACCESS_SECRET = abc123mysecret
 ```
 
-**In your client** (combine both with a colon):
+**In your client** (combine access secret and Workflowy API key):
 ```
-Authorization: Bearer abc123mysecret:wf_xyz789
+Authorization: Bearer ACCESS_SECRET:WORKFLOWY_API_KEY
 ```
 
-This design means:
-- The server doesn't store user credentials—you provide your Workflowy API key with each request
-- The access secret prevents unauthorized access even if someone knows your server URL
-- Only requests with both the correct access secret AND a valid Workflowy API key will succeed
-- Each user can use their own Workflowy API key (useful if multiple people use the same server)
+Example: `Bearer abc123mysecret:wf_xyz789`
+
+**Security notes:**
+- The server does NOT store your Workflowy API key long-term
+- For OAuth: API key is encrypted in JWT tokens (not stored in database)
+- For Legacy: API key is validated per-request (never stored)
+- Each user can use their own Workflowy API key
 
 ## Available [Workflowy API](https://beta.workflowy.com/api-reference/) Endpoints
 

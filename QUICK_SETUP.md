@@ -1,46 +1,39 @@
 # Quick Setup Summary
 
-## ✅ Completed Steps
+## Environment Variables Required
 
-1. **Neon Database**: Set up and ready
-   - Project: `workflowy-mcp` (noisy-poetry-29611987)
-   - Connection String: `postgresql://neondb_owner:YOUR_PASSWORD@ep-xxx-xxx.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require`
+For **OAuth** (Claude Desktop/Web/Mobile):
+```
+DATABASE_URL=postgresql://...
+ENCRYPTION_KEY=<64-char hex from: openssl rand -hex 32>
+JWT_SECRET=<64-char hex from: openssl rand -hex 32>
+OAUTH_ISSUER=https://your-vercel-url.vercel.app
+```
 
-2. **Vercel Project**: Imported and configured
-   - Project Name: `workflowy-mcp`
-   - Environment Variables Added:
-     - `DATABASE_URL`: Your Neon connection string
-     - `ACCESS_SECRET`: `YOUR_ACCESS_SECRET` (generate with `openssl rand -hex 32`)
+For **Legacy Token** (Claude Code/Cursor/GPT Codex):
+```
+ACCESS_SECRET=<from: openssl rand -hex 32>
+```
 
-## 🚀 Next Steps
+## 🚀 Quick Start
 
-### Step 1: Deploy to Vercel
-1. Click the **"Deploy"** button in the Vercel import page
-2. Wait for the deployment to complete
-3. Note your deployment URL (will be something like `https://workflowy-mcp-xxx.vercel.app`)
+### For Claude Desktop / Web (OAuth)
 
-### Step 2: Get Your Workflowy API Key
-1. Go to https://beta.workflowy.com/api-reference/
-2. Log in to your Workflowy account
-3. Copy your API key (starts with `wf_`)
+1. **Deploy to Vercel** with the environment variables above
+2. **In Claude:** Settings → Connectors → Add Connector
+3. **Enter URL:** `https://your-vercel-url.vercel.app/api/mcp`
+4. **Click Connect** → Enter your Workflowy API key → Authorize
+5. **Done!**
 
-### Step 3: Configure MCP Client
+### For Claude Code / Cursor (Legacy Token)
 
-**📋 For detailed setup instructions with copy-paste code snippets for Claude Code, Cursor, and GPT Codex, see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md)**
-
-Quick reference:
-- **Claude Code**: `~/.claude.json`
-- **Cursor**: `~/.cursor/mcp.json`
-- **GPT Codex**: `~/.codex/config.toml`
-
-Authorization header format: `Bearer ACCESS_SECRET:WORKFLOWY_API_KEY`
-
-### Step 4: Test
-1. Restart your MCP client (Claude Code, Cursor, or GPT Codex)
-2. Try asking: "Show me my top Workflowy notes"
+1. **Deploy to Vercel** with `ACCESS_SECRET` set
+2. **Get your Workflowy API key** from https://workflowy.com/api/
+3. **Configure your client** (see [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md))
+4. **Test:** "Show me my top Workflowy notes"
 
 ## 📝 Important Notes
 
-- The database table (`bookmarks`) will be created automatically on first use
-- Make sure your Vercel deployment URL includes `/api/mcp` at the end
-- The authorization header format is: `ACCESS_SECRET:WORKFLOWY_API_KEY`
+- MCP URL format: `https://your-vercel-url.vercel.app/api/mcp`
+- Legacy token format: `Bearer ACCESS_SECRET:WORKFLOWY_API_KEY`
+- OAuth tables are auto-created on first use
