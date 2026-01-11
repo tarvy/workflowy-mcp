@@ -67,6 +67,16 @@ This server uses **OAuth 2.0 with PKCE** (RFC 7636) for secure authentication:
 - No manual token configuration needed
 - API key is never stored in the database
 
+## Security
+
+**Important:** Each deployment must use unique secrets:
+
+- `JWT_SECRET` - Used to sign access tokens. Tokens are validated against the issuer URL, so tokens from one deployment won't work on another.
+- `ENCRYPTION_KEY` - Used to encrypt Workflowy API keys in tokens. Must be unique per deployment.
+- `OAUTH_REGISTRATION_SECRET` - Protects the client registration endpoint.
+
+Generate each secret independently using `openssl rand -hex 32`. Never reuse secrets across deployments.
+
 ## Available [Workflowy API](https://beta.workflowy.com/api-reference/) Endpoints
 
 The `workflowy_api` tool supports these endpoints:

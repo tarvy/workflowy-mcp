@@ -7,7 +7,7 @@ Owner: Travis
 Status key: Not started | In progress | Blocked | Done
 
 ## Current snapshot
-- Overall status: In progress
+- Overall status: Done (all PRs complete)
 - Scope: OAuth-only MCP, Vercel deployment, Neon DB
 - Goals: Reduce credential leakage risk, lock down client registration, simplify to a single auth flow
 
@@ -16,7 +16,7 @@ Status key: Not started | In progress | Blocked | Done
 - ~~OAuth authorization logs include redirect URLs, state, and code fragments (sensitive when combined).~~ RESOLVED (PR 1)
 - ~~Legacy bearer auth is static and never expires (risk of long-lived credential exposure).~~ RESOLVED (PR 3)
 - ~~Dynamic client registration is open to any caller (risk of unwanted clients / DB growth).~~ RESOLVED (PR 2)
-- JWT verification does not validate issuer/audience (risk if secrets reused across MCPs).
+- ~~JWT verification does not validate issuer/audience (risk if secrets reused across MCPs).~~ RESOLVED (PR 4)
 - Data isolation is not yet designed for multi-MCP or multi-tenant use (future risk).
 
 ## PR plan (units of work)
@@ -62,14 +62,18 @@ Notes:
 - Rewrote QUICK_SETUP.md, MCP_CLIENT_SETUP.md, SETUP.md, and README.md.
 
 ### PR 4: Harden JWT validation
-Status: Not started
-Owner: TBD
+Status: Done
+Owner: Travis
 Scope:
 - Validate `iss` and `aud` in `lib/oauth.ts` during token verification.
 - Document expectation for unique `JWT_SECRET` and `ENCRYPTION_KEY` per deployment.
 Acceptance criteria:
 - Tokens with mismatched issuer/audience are rejected.
 - Happy path remains unchanged for valid tokens.
+Notes:
+- Added issuer and audience validation to verifyAccessToken using jsonwebtoken options.
+- OAUTH_ISSUER is now required for token verification.
+- Added Security section to README documenting unique secrets requirement.
 
 ## Work mechanics
 Update this document after each session:
@@ -82,6 +86,7 @@ Definition of done per PR:
 - Acceptance criteria verified.
 
 ## Progress log
+- 2026-01-11: PR 4 complete - added iss/aud validation to JWT verification, documented unique secrets.
 - 2026-01-11: PR 3 complete - removed legacy bearer auth, rewrote docs for OAuth-only.
 - 2026-01-11: PR 2 complete - added OAUTH_REGISTRATION_SECRET check, removed console.error, updated docs.
 - 2026-01-11: PR 1 complete - removed all console.log statements from authorize and token routes.

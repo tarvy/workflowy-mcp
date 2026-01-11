@@ -81,6 +81,12 @@ export function generateAccessToken(
 /**
  * Verify a JWT access token and extract the Workflowy API key
  *
+ * Validates:
+ * - Signature (using JWT_SECRET)
+ * - Expiration
+ * - Issuer (must match OAUTH_ISSUER)
+ * - Audience (must match OAUTH_ISSUER)
+ *
  * Returns the decrypted Workflowy API key if valid, null otherwise
  */
 export function verifyAccessToken(token: string): {
@@ -93,9 +99,16 @@ export function verifyAccessToken(token: string): {
     return null;
   }
 
+  const issuer = process.env.OAUTH_ISSUER;
+  if (!issuer) {
+    return null;
+  }
+
   try {
     const decoded = jwt.verify(token, jwtSecret, {
       algorithms: ["HS256"],
+      issuer: issuer,
+      audience: issuer,
     }) as JWTPayload;
 
     // Decrypt the Workflowy API key
@@ -107,7 +120,7 @@ export function verifyAccessToken(token: string): {
       scope: decoded.scope,
     };
   } catch {
-    // Token invalid, expired, or malformed
+    // Token invalid, expired, malformed, or issuer/audience mismatch
     return null;
   }
 }
