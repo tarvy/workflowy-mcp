@@ -45,14 +45,20 @@
    - **Environment:** Select "Production", "Preview", and "Development" (or just "Production" if you prefer)
    - Click "Save"
 
-4. **Add ACCESS_SECRET**
+4. **Add ACCESS_SECRET** (for legacy token auth)
    - Click "Add New" again
    - **Key:** `ACCESS_SECRET`
    - **Value:** Your generated access secret (use `openssl rand -hex 32` to generate)
    - **Environment:** Select "Production", "Preview", and "Development"
    - Click "Save"
 
-5. **Redeploy Your Project**
+5. **Add OAuth Environment Variables** (for OAuth auth)
+   - `ENCRYPTION_KEY`: 64-character hex string (use `openssl rand -hex 32`)
+   - `JWT_SECRET`: 64-character hex string (use `openssl rand -hex 32`)
+   - `OAUTH_ISSUER`: Your Vercel URL (e.g., `https://workflowy-mcp.vercel.app`)
+   - `OAUTH_REGISTRATION_SECRET`: 64-character hex string (use `openssl rand -hex 32`) - protects client registration
+
+6. **Redeploy Your Project**
    - Go to the "Deployments" tab
    - Find your latest deployment
    - Click the three dots (⋯) menu

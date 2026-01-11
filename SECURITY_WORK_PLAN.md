@@ -35,8 +35,8 @@ Notes:
 - Prefer removing logs entirely unless they provide essential debugging value.
 
 ### PR 2: Gate dynamic client registration
-Status: Not started
-Owner: TBD
+Status: Done
+Owner: Travis
 Scope:
 - Require an admin registration secret for `POST /api/oauth/register`.
 - Document the secret in setup docs and README.
@@ -44,7 +44,8 @@ Acceptance criteria:
 - Requests without a valid secret return 401/403.
 - Requests with the secret succeed and return client credentials.
 Notes:
-- Use an env var (e.g., `OAUTH_REGISTRATION_SECRET`) and a request header (e.g., `x-oauth-registration-secret`).
+- Uses env var `OAUTH_REGISTRATION_SECRET` and request header `x-oauth-registration-secret`.
+- If `OAUTH_REGISTRATION_SECRET` is not set, registration remains open (backward compatible).
 
 ### PR 3: Disable legacy bearer auth
 Status: Not started
@@ -78,6 +79,7 @@ Definition of done per PR:
 - Acceptance criteria verified.
 
 ## Progress log
+- 2026-01-11: PR 2 complete - added OAUTH_REGISTRATION_SECRET check, removed console.error, updated docs.
 - 2026-01-11: PR 1 complete - removed all console.log statements from authorize and token routes.
 - YYYY-MM-DD: Initialized plan.
 

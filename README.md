@@ -40,6 +40,7 @@ See [MCP_CLIENT_SETUP.md](./MCP_CLIENT_SETUP.md) for detailed configuration.
    - `ENCRYPTION_KEY` - 64-character hex string: `openssl rand -hex 32`
    - `JWT_SECRET` - 64-character hex string: `openssl rand -hex 32`
    - `OAUTH_ISSUER` - Your Vercel URL (e.g., `https://workflowy-mcp.vercel.app`)
+   - `OAUTH_REGISTRATION_SECRET` - 64-character hex string: `openssl rand -hex 32` (protects client registration)
 
    **Required for Legacy Token Auth:**
    - `ACCESS_SECRET` - A strong random secret: `openssl rand -hex 32`

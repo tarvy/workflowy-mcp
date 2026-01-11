@@ -8,6 +8,7 @@ DATABASE_URL=postgresql://...
 ENCRYPTION_KEY=<64-char hex from: openssl rand -hex 32>
 JWT_SECRET=<64-char hex from: openssl rand -hex 32>
 OAUTH_ISSUER=https://your-vercel-url.vercel.app
+OAUTH_REGISTRATION_SECRET=<64-char hex from: openssl rand -hex 32>
 ```
 
 For **Legacy Token** (Claude Code/Cursor/GPT Codex):

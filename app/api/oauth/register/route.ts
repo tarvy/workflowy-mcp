@@ -10,6 +10,21 @@ import { createOAuthClient } from "@/lib/db";
 import type { DCRRequest, DCRResponse, OAuthError } from "@/lib/types";
 
 export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse | OAuthError>> {
+  // Require admin secret for client registration
+  const registrationSecret = process.env.OAUTH_REGISTRATION_SECRET;
+  if (registrationSecret) {
+    const providedSecret = req.headers.get("x-oauth-registration-secret");
+    if (providedSecret !== registrationSecret) {
+      return NextResponse.json(
+        {
+          error: "access_denied",
+          error_description: "Invalid or missing registration secret",
+        } as OAuthError,
+        { status: 403 }
+      );
+    }
+  }
+
   try {
     const body = await req.json() as DCRRequest;
 
@@ -92,8 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
     };
 
     return NextResponse.json(response, { status: 201 });
-  } catch (error) {
-    console.error("DCR error:", error);
+  } catch {
     return NextResponse.json(
       {
         error: "server_error",
