@@ -311,14 +311,9 @@ function errorRedirect(redirectUri: string, error: string, description: string, 
  * GET /api/oauth/authorize - Render consent form
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  console.log("[AUTHORIZE GET] Full URL:", req.url);
-  console.log("[AUTHORIZE GET] All params:", Object.fromEntries(new URL(req.url).searchParams.entries()));
-
   const url = new URL(req.url);
   const clientId = url.searchParams.get("client_id");
   const redirectUri = url.searchParams.get("redirect_uri");
-  console.log("[AUTHORIZE GET] client_id:", clientId);
-  console.log("[AUTHORIZE GET] redirect_uri:", redirectUri);
   const responseType = url.searchParams.get("response_type");
   const codeChallenge = url.searchParams.get("code_challenge");
   const codeChallengeMethod = url.searchParams.get("code_challenge_method");
@@ -456,10 +451,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const url = new URL(redirectUri);
   url.searchParams.set("code", code);
   if (state) url.searchParams.set("state", state);
-
-  console.log("[AUTHORIZE POST] Redirecting to:", url.toString());
-  console.log("[AUTHORIZE POST] Code generated:", code.substring(0, 10) + "...");
-  console.log("[AUTHORIZE POST] State:", state);
 
   // Use 302 redirect to convert POST to GET (307 would preserve POST method)
   return NextResponse.redirect(url.toString(), 302);

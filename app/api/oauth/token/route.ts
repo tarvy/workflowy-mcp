@@ -82,9 +82,6 @@ export async function OPTIONS(): Promise<NextResponse> {
  * POST /api/oauth/token
  */
 export async function POST(req: NextRequest): Promise<NextResponse<TokenResponse | OAuthError>> {
-  console.log("[TOKEN] Request received:", req.method, req.url);
-  console.log("[TOKEN] Headers:", Object.fromEntries(req.headers.entries()));
-
   // Parse form data
   const contentType = req.headers.get("content-type") || "";
   let body: URLSearchParams;
@@ -100,17 +97,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<TokenResponse
   }
 
   const grantType = body.get("grant_type");
-  console.log("[TOKEN] Grant type:", grantType);
-  console.log("[TOKEN] Body params:", Object.fromEntries(body.entries()));
 
   if (grantType === "authorization_code") {
-    console.log("[TOKEN] Handling authorization_code grant");
     return handleAuthorizationCode(req, body);
   } else if (grantType === "refresh_token") {
-    console.log("[TOKEN] Handling refresh_token grant");
     return handleRefreshToken(req, body);
   } else {
-    console.log("[TOKEN] Unsupported grant type:", grantType);
     return errorResponse("unsupported_grant_type", "Supported grant types: authorization_code, refresh_token");
   }
 }
@@ -124,18 +116,13 @@ async function handleAuthorizationCode(
 ): Promise<NextResponse<TokenResponse | OAuthError>> {
   // Extract client credentials
   const credentials = extractClientCredentials(req, body);
-  console.log("[TOKEN] Client credentials extracted:", credentials ? `clientId=${credentials.clientId}` : "none");
   if (!credentials) {
-    console.log("[TOKEN] ERROR: No client credentials");
     return errorResponse("invalid_client", "Client authentication required");
   }
 
   // Verify client credentials
-  console.log("[TOKEN] Verifying client credentials...");
   const isValidClient = await verifyClientCredentials(credentials.clientId, credentials.clientSecret);
-  console.log("[TOKEN] Client valid:", isValidClient);
   if (!isValidClient) {
-    console.log("[TOKEN] ERROR: Invalid client credentials");
     return errorResponse("invalid_client", "Invalid client credentials", 401);
   }
 
