@@ -10,12 +10,7 @@ An MCP (Model Context Protocol) server that connects AI assistants to your Workf
 ## Quick Start
 
 1. **Deploy to Vercel** (see [Deployment](#deployment) below)
-2. **Add MCP Server in Claude:**
-   - Open Claude Desktop → Settings → Connectors
-   - Click "Add Connector"
-   - Enter URL: `https://your-vercel-url.vercel.app/api/mcp`
-   - Click "Connect" and follow the OAuth flow
-   - Enter your Workflowy API key when prompted
+2. **Connect Claude Desktop or Claude Code** (see [Connecting Clients](#connecting-clients) below)
 3. **Done!** Start using Workflowy with Claude
 
 ---
@@ -33,7 +28,9 @@ An MCP (Model Context Protocol) server that connects AI assistants to your Workf
    - `ENCRYPTION_KEY` - 64-character hex string: `openssl rand -hex 32`
    - `JWT_SECRET` - 64-character hex string: `openssl rand -hex 32`
    - `OAUTH_ISSUER` - Your Vercel URL (e.g., `https://workflowy-mcp.vercel.app`)
-   - `OAUTH_REGISTRATION_SECRET` - 64-character hex string: `openssl rand -hex 32` (protects client registration)
+
+   **Optional Environment Variables:**
+   - `OAUTH_REGISTRATION_SECRET` - 64-character hex string: `openssl rand -hex 32` (restricts who can register OAuth clients; if not set, registration is open)
 
 4. Deploy the project
 
@@ -45,12 +42,7 @@ An MCP (Model Context Protocol) server that connects AI assistants to your Workf
 
 ### 3. Connect Your Client
 
-Add the MCP server URL in Claude's Connectors settings:
-- Open Claude Desktop → Settings → Connectors
-- Click "Add Connector"
-- Enter URL: `https://your-vercel-url.vercel.app/api/mcp`
-- Click "Connect" and follow the OAuth flow
-- Enter your Workflowy API key when prompted
+See [Connecting Clients](#connecting-clients) below for Claude Desktop and Claude Code instructions.
 
 ## Authentication
 
@@ -67,13 +59,36 @@ This server uses **OAuth 2.0 with PKCE** (RFC 7636) for secure authentication:
 - No manual token configuration needed
 - API key is never stored in the database
 
+## Connecting Clients
+
+### Claude Desktop
+
+1. Open Claude Desktop → Settings → Connectors
+2. Click "Add custom connector"
+3. Fill in:
+   - **Name:** Workflowy
+   - **Remote MCP server URL:** `https://your-vercel-url.vercel.app/api/mcp`
+4. Click **Add**
+5. You'll be redirected to authorize - enter your Workflowy API key
+6. Complete the OAuth consent flow
+
+### Claude Code
+
+Run this command:
+
+```bash
+claude mcp add workflowy --transport http https://your-vercel-url.vercel.app/api/mcp -s user
+```
+
+Then restart Claude Code. When you first use a Workflowy tool, it will open a browser for OAuth authorization.
+
 ## Security
 
 **Important:** Each deployment must use unique secrets:
 
 - `JWT_SECRET` - Used to sign access tokens. Tokens are validated against the issuer URL, so tokens from one deployment won't work on another.
 - `ENCRYPTION_KEY` - Used to encrypt Workflowy API keys in tokens. Must be unique per deployment.
-- `OAUTH_REGISTRATION_SECRET` - Protects the client registration endpoint.
+- `OAUTH_REGISTRATION_SECRET` - (Optional) Protects the client registration endpoint. If set, clients must provide this secret via `x-oauth-registration-secret` header to register.
 
 Generate each secret independently using `openssl rand -hex 32`. Never reuse secrets across deployments.
 

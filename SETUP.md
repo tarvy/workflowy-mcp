@@ -41,13 +41,18 @@
 
    Add each of the following:
 
+   **Required:**
    | Key | Value | Description |
    |-----|-------|-------------|
    | `DATABASE_URL` | Your Neon connection string | From Step 1 |
    | `ENCRYPTION_KEY` | `openssl rand -hex 32` | 64-char hex string |
    | `JWT_SECRET` | `openssl rand -hex 32` | 64-char hex string |
    | `OAUTH_ISSUER` | `https://your-project.vercel.app` | Your Vercel URL |
-   | `OAUTH_REGISTRATION_SECRET` | `openssl rand -hex 32` | 64-char hex string |
+
+   **Optional:**
+   | Key | Value | Description |
+   |-----|-------|-------------|
+   | `OAUTH_REGISTRATION_SECRET` | `openssl rand -hex 32` | Restricts OAuth client registration |
 
    For each variable:
    - Click "Add New"
@@ -71,18 +76,28 @@
    - If you don't have one, generate it
    - **Copy your API key** - it looks like `wf_xxxxxxxxxxxxx`
 
-## Step 4: Connect Claude to Your MCP Server
+## Step 4: Connect to Your MCP Server
 
-1. **Open Claude Desktop**
-2. **Go to Settings → Connectors**
-3. **Click "Add Connector"**
-4. **Enter your MCP Server URL:**
-   ```
-   https://your-project-name.vercel.app/api/mcp
-   ```
-5. **Click "Connect"**
-6. **Enter your Workflowy API key** when prompted
-7. **Click "Authorize"**
+### Option A: Claude Desktop
+
+1. Open Claude Desktop → Settings → Connectors
+2. Click "Add custom connector"
+3. Fill in:
+   - **Name:** Workflowy
+   - **Remote MCP server URL:** `https://your-project-name.vercel.app/api/mcp`
+4. Click **Add**
+5. Enter your Workflowy API key when prompted
+6. Click "Authorize"
+
+### Option B: Claude Code
+
+Run this command:
+
+```bash
+claude mcp add workflowy --transport http https://your-project-name.vercel.app/api/mcp -s user
+```
+
+Restart Claude Code, then use any Workflowy tool - it will open a browser for OAuth authorization.
 
 ## Step 5: Verify Setup
 

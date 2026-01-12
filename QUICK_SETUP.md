@@ -1,22 +1,35 @@
 # Quick Setup Summary
 
-## Environment Variables Required
+## Environment Variables
 
+**Required:**
 ```
 DATABASE_URL=postgresql://...
 ENCRYPTION_KEY=<64-char hex from: openssl rand -hex 32>
 JWT_SECRET=<64-char hex from: openssl rand -hex 32>
 OAUTH_ISSUER=https://your-vercel-url.vercel.app
-OAUTH_REGISTRATION_SECRET=<64-char hex from: openssl rand -hex 32>
+```
+
+**Optional:**
+```
+OAUTH_REGISTRATION_SECRET=<64-char hex>  # restricts OAuth client registration
 ```
 
 ## Quick Start
 
 1. **Deploy to Vercel** with the environment variables above
-2. **In Claude:** Settings → Connectors → Add Connector
-3. **Enter URL:** `https://your-vercel-url.vercel.app/api/mcp`
-4. **Click Connect** → Enter your Workflowy API key → Authorize
-5. **Done!**
+
+2. **Connect Claude Desktop:**
+   - Settings → Connectors → Add custom connector
+   - Name: `Workflowy`
+   - URL: `https://your-vercel-url.vercel.app/api/mcp`
+   - Click Add → Enter Workflowy API key → Authorize
+
+3. **Connect Claude Code:**
+   ```bash
+   claude mcp add workflowy --transport http https://your-vercel-url.vercel.app/api/mcp -s user
+   ```
+   Restart Claude Code, then use a Workflowy tool to trigger OAuth.
 
 ## Important Notes
 
