@@ -27,7 +27,7 @@ An MCP (Model Context Protocol) server that connects AI assistants to your Workf
    - `DATABASE_URL` - Your Neon database connection string
    - `ENCRYPTION_KEY` - 64-character hex string: `openssl rand -hex 32`
    - `JWT_SECRET` - 64-character hex string: `openssl rand -hex 32`
-   - `OAUTH_ISSUER` - Your Vercel URL (e.g., `https://workflowy-mcp.vercel.app`)
+   - `OAUTH_ISSUER` - Your Vercel URL (e.g., `https://workflowy-mcp-mauve.vercel.app`)
 
    **Optional Environment Variables:**
    - `OAUTH_REGISTRATION_SECRET` - 64-character hex string: `openssl rand -hex 32` (restricts who can register OAuth clients; if not set, registration is open)
