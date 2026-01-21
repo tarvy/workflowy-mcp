@@ -406,8 +406,9 @@ const verifyToken = async (
 };
 
 // Wrap handler with auth - makes authInfo available in tool handlers via extra.authInfo
+// required: false allows initial MCP handshake without auth; tools will enforce auth via getApiKey()
 const authHandler = withMcpAuth(handler, verifyToken, {
-  required: true,
+  required: false,
 });
 
 export { authHandler as GET, authHandler as POST, authHandler as DELETE };

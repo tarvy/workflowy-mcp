@@ -2,12 +2,29 @@
  * OAuth 2.0 Dynamic Client Registration (RFC 7591)
  *
  * POST /api/oauth/register
+ * OPTIONS /api/oauth/register - CORS preflight
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateClientId, generateClientSecret } from "@/lib/crypto";
 import { createOAuthClient } from "@/lib/db";
 import type { DCRRequest, DCRResponse, OAuthError } from "@/lib/types";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-oauth-registration-secret",
+};
+
+/**
+ * OPTIONS /api/oauth/register - CORS preflight
+ */
+export async function OPTIONS(): Promise<NextResponse> {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
 
 export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse | OAuthError>> {
   // Require admin secret for client registration
@@ -20,7 +37,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
           error: "access_denied",
           error_description: "Invalid or missing registration secret",
         } as OAuthError,
-        { status: 403 }
+        { status: 403, headers: corsHeaders }
       );
     }
   }
@@ -35,7 +52,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
           error: "invalid_request",
           error_description: "redirect_uris is required and must be a non-empty array",
         } as OAuthError,
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -43,15 +60,24 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
     for (const uri of body.redirect_uris) {
       try {
         const parsed = new URL(uri);
-        // Allow localhost with http, require https for everything else
         const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-        if (!isLocalhost && parsed.protocol !== "https:") {
+
+        // Allow: localhost with http/https, https for any host, or custom app schemes (e.g. cursor://, vscode://)
+        // Custom schemes are used by desktop/IDE apps per RFC 8252 (OAuth 2.0 for Native Apps)
+        if (parsed.protocol === "https:") {
+          // HTTPS always allowed
+        } else if (isLocalhost && (parsed.protocol === "http:" || parsed.protocol === "https:")) {
+          // localhost with http or https (development)
+        } else if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          // Custom URI scheme (cursor:, vscode:, etc.) - allowed for native/IDE app callbacks
+        } else {
+          // http with non-localhost is insecure
           return NextResponse.json(
             {
               error: "invalid_request",
-              error_description: `Redirect URI must use HTTPS: ${uri}`,
+              error_description: `Redirect URI must use HTTPS or a custom app scheme (e.g. cursor://): ${uri}`,
             } as OAuthError,
-            { status: 400 }
+            { status: 400, headers: corsHeaders }
           );
         }
       } catch {
@@ -60,7 +86,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
             error: "invalid_request",
             error_description: `Invalid redirect URI: ${uri}`,
           } as OAuthError,
-          { status: 400 }
+          { status: 400, headers: corsHeaders }
         );
       }
     }
@@ -81,7 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
             error: "invalid_request",
             error_description: `Unsupported grant type: ${grantType}`,
           } as OAuthError,
-          { status: 400 }
+          { status: 400, headers: corsHeaders }
         );
       }
     }
@@ -106,14 +132,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<DCRResponse |
       response_types: ["code"],
     };
 
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json(response, { status: 201, headers: corsHeaders });
   } catch {
     return NextResponse.json(
       {
         error: "server_error",
         error_description: "Failed to register client",
       } as OAuthError,
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
