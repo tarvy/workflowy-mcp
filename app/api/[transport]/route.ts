@@ -72,6 +72,21 @@ function getApiKey(extra: { authInfo?: AuthInfo }): string {
   return extra.authInfo.token;
 }
 
+// Normalize a node ID: accept a full Workflowy URL or a bare ID.
+// Examples:
+//   "https://workflowy.com/#/50f478af8767"  → "50f478af8767"
+//   "workflowy.com/#/50f478af8767"           → "50f478af8767"
+//   "#/50f478af8767"                         → "50f478af8767"
+//   "50f478af8767"                           → "50f478af8767"
+//   "inbox" / "home" / "None"                → unchanged
+function parseNodeId(input: string): string {
+  const trimmed = input.trim();
+  // Match a Workflowy URL or hash fragment containing a node ID
+  const match = trimmed.match(/(?:workflowy\.com\/)?#\/([a-f0-9-]+)/i);
+  if (match) return match[1];
+  return trimmed;
+}
+
 const handler = createMcpHandler(
   (server) => {
     // ==================== BOOKMARK TOOLS ====================
@@ -85,21 +100,22 @@ const handler = createMcpHandler(
           .describe(
             "A friendly name for the bookmark (e.g., 'special_inbox', 'work_tasks')",
           ),
-        node_id: z.string().describe("The Workflowy node UUID to bookmark"),
+        node_id: z.string().describe("The Workflowy node ID or URL to bookmark"),
       },
       async ({ name, node_id }: { name: string; node_id: string }, extra) => {
         getApiKey(extra); // Ensure auth is present
+        const id = parseNodeId(node_id);
         const sql = await getDb();
         await sql`
           INSERT INTO bookmarks (name, node_id)
-          VALUES (${name}, ${node_id})
-          ON CONFLICT (name) DO UPDATE SET node_id = ${node_id}
+          VALUES (${name}, ${id})
+          ON CONFLICT (name) DO UPDATE SET node_id = ${id}
         `;
         return {
           content: [
             {
               type: "text",
-              text: `Bookmark "${name}" saved with node ID: ${node_id}`,
+              text: `Bookmark "${name}" saved with node ID: ${id}`,
             },
           ],
         };
@@ -152,13 +168,14 @@ const handler = createMcpHandler(
         parent_id: z
           .string()
           .describe(
-            "Parent node ID: 'None' for top-level, 'inbox', 'home', or a node UUID",
+            "Parent node ID or Workflowy URL: 'None' for top-level, 'inbox', 'home', a node ID, or a full URL like 'https://workflowy.com/#/abc123'",
           ),
       },
       async ({ parent_id }: { parent_id: string }, extra) => {
+        const id = parseNodeId(parent_id);
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes?parent_id=${encodeURIComponent(parent_id)}`,
+          `/api/v1/nodes?parent_id=${encodeURIComponent(id)}`,
           "GET",
         );
       },
@@ -168,12 +185,12 @@ const handler = createMcpHandler(
       "get_node",
       "Get a single node by its ID. Returns the node's name, note, and metadata.",
       {
-        node_id: z.string().describe("The node UUID to retrieve"),
+        node_id: z.string().describe("The node ID or Workflowy URL (e.g. 'https://workflowy.com/#/abc123' or just 'abc123')"),
       },
       async ({ node_id }: { node_id: string }, extra) => {
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes/${node_id}`,
+          `/api/v1/nodes/${parseNodeId(node_id)}`,
           "GET",
         );
       },
@@ -211,7 +228,7 @@ const handler = createMcpHandler(
         parent_id: z
           .string()
           .describe(
-            "Where to create the node: 'inbox', 'home', 'None' for top-level, or a node UUID",
+            "Where to create the node: 'inbox', 'home', 'None' for top-level, a node ID, or a Workflowy URL",
           ),
         note: z
           .string()
@@ -230,7 +247,8 @@ const handler = createMcpHandler(
         },
         extra,
       ) => {
-        const body: Record<string, unknown> = { name, parent_id };
+        const id = parseNodeId(parent_id);
+        const body: Record<string, unknown> = { name, parent_id: id };
         if (note) body.note = note;
         return workflowyRequest(
           getApiKey(extra),
@@ -245,7 +263,7 @@ const handler = createMcpHandler(
       "update_node",
       "Update an existing node's name or note.",
       {
-        node_id: z.string().describe("The node UUID to update"),
+        node_id: z.string().describe("The node ID or Workflowy URL to update"),
         name: z.string().optional().describe("New name/text for the node"),
         note: z.string().optional().describe("New note for the node"),
       },
@@ -266,7 +284,7 @@ const handler = createMcpHandler(
         if (note !== undefined) body.note = note;
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes/${node_id}`,
+          `/api/v1/nodes/${parseNodeId(node_id)}`,
           "POST",
           body,
         );
@@ -277,12 +295,12 @@ const handler = createMcpHandler(
       "delete_node",
       "Permanently delete a node and all its children. Use with caution.",
       {
-        node_id: z.string().describe("The node UUID to delete"),
+        node_id: z.string().describe("The node ID or Workflowy URL to delete"),
       },
       async ({ node_id }: { node_id: string }, extra) => {
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes/${node_id}`,
+          `/api/v1/nodes/${parseNodeId(node_id)}`,
           "DELETE",
         );
       },
@@ -292,11 +310,11 @@ const handler = createMcpHandler(
       "move_node",
       "Move a node to a different parent location.",
       {
-        node_id: z.string().describe("The node UUID to move"),
+        node_id: z.string().describe("The node ID or Workflowy URL to move"),
         parent_id: z
           .string()
           .describe(
-            "New parent: 'inbox', 'home', 'None' for top-level, or a node UUID",
+            "New parent: 'inbox', 'home', 'None' for top-level, a node ID, or a Workflowy URL",
           ),
       },
       async (
@@ -311,10 +329,10 @@ const handler = createMcpHandler(
       ) => {
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes/${node_id}/move`,
+          `/api/v1/nodes/${parseNodeId(node_id)}/move`,
           "POST",
           {
-            parent_id,
+            parent_id: parseNodeId(parent_id),
           },
         );
       },
@@ -326,12 +344,12 @@ const handler = createMcpHandler(
       "complete_node",
       "Mark a node as completed (checked off).",
       {
-        node_id: z.string().describe("The node UUID to mark as complete"),
+        node_id: z.string().describe("The node ID or Workflowy URL to mark as complete"),
       },
       async ({ node_id }: { node_id: string }, extra) => {
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes/${node_id}/complete`,
+          `/api/v1/nodes/${parseNodeId(node_id)}/complete`,
           "POST",
         );
       },
@@ -341,12 +359,12 @@ const handler = createMcpHandler(
       "uncomplete_node",
       "Mark a node as not completed (unchecked).",
       {
-        node_id: z.string().describe("The node UUID to mark as incomplete"),
+        node_id: z.string().describe("The node ID or Workflowy URL to mark as incomplete"),
       },
       async ({ node_id }: { node_id: string }, extra) => {
         return workflowyRequest(
           getApiKey(extra),
-          `/api/v1/nodes/${node_id}/uncomplete`,
+          `/api/v1/nodes/${parseNodeId(node_id)}/uncomplete`,
           "POST",
         );
       },
@@ -377,7 +395,8 @@ Bookmarks let you save node IDs with friendly names. When a user mentions a name
 ## Tips
 - Always use list_bookmarks when the user refers to a named location, then pick the best match
 - Avoid export_all_nodes unless necessary (rate limited to 1/min)
-- Node names support basic formatting and markdown`,
+- Node names support basic formatting and markdown
+- All node_id and parent_id parameters accept full Workflowy URLs (e.g. 'https://workflowy.com/#/abc123') — the server automatically extracts the node ID`,
   },
   {
     basePath: "/api",
